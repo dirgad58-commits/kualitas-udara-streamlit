@@ -1,8 +1,9 @@
 """
 Streamlit Dashboard: Sistem Prediksi Konsentrasi PM2.5 & Estimasi AQI
 Berbasis Algoritma XGBoost Regressor dan Standar US EPA (Piecewise Linear Interpolation)
-Tema: Premium Enterprise Light Theme (Deep Navy #0A192F & Champagne Gold #D97706)
-Fitur: Menu Tab Bergaya Pill Card (Kontras Maksimal, Huruf Tebal Sangat Jelas), Bebas Emotikon Berlebihan
+Tema: Premium Academic & Enterprise Grade (Deep Navy #0A192F & Champagne Gold #D97706)
+Fitur: 4 Menu Lengkap (Termasuk Penjelajah Basis Data), Sidebar Resmi Tugas Akademik,
+Kontras Maksimal 100% Legibel, Bebas Emotikon Berlebihan
 """
 
 import os
@@ -24,6 +25,10 @@ if ROOT_DIR not in sys.path:
 
 from src.aqi_calculator import calculate_pm25_aqi, calculate_aqi_dataframe, EPA_PM25_BREAKPOINTS
 
+# Inisialisasi memori sesi untuk log inferensi
+if 'prediction_logs_memory' not in st.session_state:
+    st.session_state['prediction_logs_memory'] = []
+
 # ==============================================================================
 # 1. KONFIGURASI HALAMAN & INJEKSI CSS ENTERPRISE
 # ==============================================================================
@@ -34,7 +39,6 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Injeksi CSS: Deep Navy (#0A192F), Champagne Gold (#D97706), Soft Slate (#F8FAFC)
 st.markdown("""
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com">
@@ -54,6 +58,7 @@ html, body, [class*="css"], .stApp {
 .stTabs [data-baseweb="tab-list"],
 [data-baseweb="tab-list"] {
     display: flex !important;
+    flex-wrap: wrap !important;
     gap: 0.8rem !important;
     background: #E2E8F0 !important;
     padding: 6px 8px !important;
@@ -65,7 +70,7 @@ html, body, [class*="css"], .stApp {
     box-shadow: inset 0 2px 4px rgba(0,0,0,0.03) !important;
 }
 
-/* Hilangkan garis bawah merah bawaan */
+/* Sembunyikan garis bawah merah bawaan */
 .stTabs [data-baseweb="tab-highlight"],
 [data-baseweb="tab-highlight"],
 [data-baseweb="tab-border"] {
@@ -78,7 +83,7 @@ html, body, [class*="css"], .stApp {
 .stTabs [data-baseweb="tab"],
 button[data-baseweb="tab"] {
     border-radius: 9px !important;
-    padding: 0.75rem 1.6rem !important;
+    padding: 0.75rem 1.4rem !important;
     border: 1.5px solid transparent !important;
     transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
     cursor: pointer !important;
@@ -90,7 +95,7 @@ button[data-baseweb="tab"] {
 button[data-baseweb="tab"][aria-selected="false"] {
     background-color: #FFFFFF !important;
     border-color: #CBD5E1 !important;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.03) !important;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.02) !important;
 }
 
 .stTabs [data-baseweb="tab"][aria-selected="false"] p,
@@ -98,7 +103,7 @@ button[data-baseweb="tab"][aria-selected="false"] {
 .stTabs [data-baseweb="tab"][aria-selected="false"] span,
 button[data-baseweb="tab"][aria-selected="false"] * {
     color: #0A192F !important;
-    font-size: 1.05rem !important;
+    font-size: 0.98rem !important;
     font-weight: 800 !important;
     letter-spacing: -0.01em !important;
 }
@@ -127,7 +132,7 @@ button[data-baseweb="tab"][aria-selected="true"] {
 .stTabs [data-baseweb="tab"][aria-selected="true"] span,
 button[data-baseweb="tab"][aria-selected="true"] * {
     color: #FFFFFF !important;
-    font-size: 1.05rem !important;
+    font-size: 0.98rem !important;
     font-weight: 800 !important;
     letter-spacing: -0.01em !important;
 }
@@ -243,15 +248,83 @@ div[data-testid="stFormSubmitButton"] > button:hover {
     transform: translateY(-2px) !important;
 }
 
-/* --------------------------------------------------------------------------
-   5. SIDEBAR (NAVY THEME)
--------------------------------------------------------------------------- */
+/* -------------------------------------------------------------
+   5. SIDEBAR PREMIUM KHUSUS TUGAS AKADEMIK
+------------------------------------------------------------- */
 section[data-testid="stSidebar"] {
     background-color: #0A192F !important;
     border-right: 2px solid #1E293B !important;
 }
 section[data-testid="stSidebar"] * {
     color: #F1F5F9 !important;
+}
+
+.sidebar-title-card {
+    padding: 0.8rem 0 1.2rem 0;
+    border-bottom: 2px solid #D97706;
+    margin-bottom: 1.2rem;
+}
+.sidebar-header-main {
+    font-size: 1.15rem;
+    font-weight: 800;
+    letter-spacing: 0.03em;
+    color: #FFFFFF;
+    text-transform: uppercase;
+}
+.sidebar-header-sub {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #D97706;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-top: 0.2rem;
+}
+
+.profile-card {
+    background: rgba(30, 41, 59, 0.75);
+    border: 1px solid rgba(148, 163, 184, 0.2);
+    border-left: 3.5px solid #D97706;
+    border-radius: 8px;
+    padding: 0.9rem 1rem;
+    margin-bottom: 0.8rem;
+}
+.profile-card .p-label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #94A3B8;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+.profile-card .p-val {
+    font-size: 0.92rem;
+    font-weight: 700;
+    color: #FFFFFF;
+    margin-top: 0.15rem;
+}
+.profile-card .p-code {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.82rem;
+    color: #FBBF24;
+}
+
+.db-status-badge {
+    display: inline-block;
+    padding: 0.25rem 0.6rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+}
+.db-status-live {
+    background: rgba(16, 185, 129, 0.2);
+    color: #10B981;
+    border: 1px solid #10B981;
+}
+.db-status-fallback {
+    background: rgba(245, 158, 11, 0.2);
+    color: #FBBF24;
+    border: 1px solid #F59E0B;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -316,6 +389,32 @@ def load_environmental_data():
         'hour_of_day': dates.hour
     })
     return df_dummy, "Simulasi Generator"
+
+def load_individual_table(table_name):
+    """Memuat tabel individual baik dari MySQL maupun dari file CSV lokal data/"""
+    engine = get_db_connection()
+    if engine is not None:
+        try:
+            df = pd.read_sql(f"SELECT * FROM {table_name}", engine)
+            if not df.empty:
+                return df, "Live Database (MySQL 8.0)"
+        except Exception:
+            pass
+            
+    csv_paths = [
+        os.path.join(ROOT_DIR, 'data', f'{table_name}.csv'),
+        os.path.join(os.path.dirname(__file__), '..', 'data', f'{table_name}.csv'),
+        f'data/{table_name}.csv'
+    ]
+    for p in csv_paths:
+        if os.path.exists(p):
+            try:
+                df = pd.read_csv(p)
+                return df, "Storage Cadangan (CSV Data Pipeline)"
+            except Exception:
+                pass
+                
+    return pd.DataFrame(), "Tabel Kosong"
 
 @st.cache_resource
 def load_ml_artifacts():
@@ -415,7 +514,7 @@ def add_numpy_ols_trendline(fig, x_series, y_series, name="Garis Regresi OLS"):
 
 
 # ==============================================================================
-# 4. LOAD STATE & SIDEBAR
+# 4. LOAD STATE & SIDEBAR RESMI TUGAS AKADEMIK
 # ==============================================================================
 df_env, data_source_info = load_environmental_data()
 model, scaler, metadata = load_ml_artifacts()
@@ -425,33 +524,70 @@ if 'aqi' not in df_env.columns and 'pm25' in df_env.columns:
 
 with st.sidebar:
     st.markdown("""
-<div style="padding:0.6rem 0 1.0rem 0; border-bottom:2px solid #D97706; margin-bottom:1.0rem;">
-    <div style="font-size:1.25rem; font-weight:800; color:#FFFFFF;">AQI PREDICTOR AI</div>
-    <div style="font-size:0.75rem; font-weight:700; color:#D97706; letter-spacing:0.06em;">XGBOOST MLOPS ENGINE</div>
+<div class="sidebar-title-card">
+    <div class="sidebar-header-main">Tugas Akhir Data Science</div>
+    <div class="sidebar-header-sub">Sistem Prediksi PM2.5 & AQI</div>
 </div>
 """, unsafe_allow_html=True)
 
-    st.caption("Estimasi Konsentrasi PM2.5 & Indeks Kualitas Udara (US EPA Revised 2024)")
-    st.markdown("---")
+    # Identitas Peneliti / Mahasiswa
+    st.markdown("""
+<div class="profile-card">
+    <div class="p-label">Peneliti / Mahasiswa</div>
+    <div class="p-val">La Ode Muhamad Dirga</div>
+    <div class="p-code">NIM: 007 • Data Science & AI</div>
+</div>
+""", unsafe_allow_html=True)
+
+    # Status Basis Data
+    is_live = "Live" in data_source_info
+    badge_class = "db-status-live" if is_live else "db-status-fallback"
+    badge_text = "Live MySQL (Local)" if is_live else "Sync Fallback (Cloud)"
     
-    st.markdown("**Spesifikasi Pipeline:**")
-    st.markdown(f"• Sumber Data: **{data_source_info}**")
-    st.markdown(f"• Volume Observasi: **{len(df_env):,} baris**")
-    
+    st.markdown(f"""
+<div class="profile-card">
+    <div class="p-label">Konektivitas Basis Data</div>
+    <div style="margin-top:0.3rem;">
+        <span class="db-status-badge {badge_class}">{badge_text}</span>
+    </div>
+    <div style="font-size:0.75rem; color:#94A3B8; margin-top:0.35rem;">
+        {len(df_env):,} baris data terproses
+    </div>
+</div>
+""", unsafe_allow_html=True)
+
+    # Spesifikasi Model Ilmiah
     r2_val = metadata.get('metrics', {}).get('r2_score', 0.7756) if metadata else 0.7756
     mae_val = metadata.get('metrics', {}).get('mae', 2.46) if metadata else 2.46
     rmse_val = metadata.get('metrics', {}).get('rmse', 3.12) if metadata else 3.12
     ver_val = metadata.get('version', 'v1.0.0') if metadata else 'v1.0.0'
 
-    st.markdown(f"• Versi Model: **{ver_val}**")
-    st.markdown(f"• Skor Akurasi $R^2$: **{r2_val:.4f}**")
-    st.markdown(f"• Error MAE: **{mae_val:.2f} µg/m³**")
-    st.markdown(f"• Error RMSE: **{rmse_val:.2f} µg/m³**")
+    st.markdown(f"""
+<div class="profile-card">
+    <div class="p-label">Metrik Evaluasi Model</div>
+    <div class="p-val" style="color:#FBBF24;">R² Score: {r2_val:.4f}</div>
+    <div style="font-size:0.78rem; color:#CBD5E1; margin-top:0.2rem;">
+        • MAE: <b>{mae_val:.2f} µg/m³</b><br>
+        • RMSE: <b>{rmse_val:.2f} µg/m³</b><br>
+        • Model: <b>XGBoost Regressor</b>
+    </div>
+</div>
+""", unsafe_allow_html=True)
 
-    st.markdown("---")
-    st.markdown("**Infrastruktur & Stasiun:**")
-    st.markdown("• Lokasi: **Jakarta Pusat (LOC-JKT-01)**")
-    st.markdown("• Orkestrasi: **Astronomer Airflow**")
+    # Infrastruktur Pipeline
+    st.markdown("""
+<div class="profile-card">
+    <div class="p-label">Infrastruktur Multi-Sumber</div>
+    <div style="font-size:0.78rem; color:#E2E8F0; margin-top:0.25rem;">
+        • Sensor: <b>OpenAQ API</b><br>
+        • Cuaca: <b>Open-Meteo API</b><br>
+        • Orkestrasi: <b>Astronomer Airflow</b><br>
+        • Standar: <b>US EPA Revised 2024</b>
+    </div>
+</div>
+""", unsafe_allow_html=True)
+
+    st.markdown("<div style='font-size:0.72rem; color:#64748B; text-align:center; margin-top:1rem;'>Repositori GitHub: dirgad58-commits</div>", unsafe_allow_html=True)
 
 
 # ==============================================================================
@@ -472,12 +608,13 @@ st.markdown("""
 
 
 # ==============================================================================
-# 6. TAB UTAMA DENGAN LABEL TEGAS & TEBAL
+# 6. EMPAT MENU TAB LENGKAP
 # ==============================================================================
-tab_input, tab_monitoring, tab_evaluasi = st.tabs([
+tab_input, tab_monitoring, tab_evaluasi, tab_database = st.tabs([
     "1. SIMULATOR PREDIKSI AI",
     "2. MONITORING DATA LINGKUNGAN (Q1 - Q4)",
-    "3. EVALUASI MODEL XGBOOST (Q5)"
+    "3. EVALUASI MODEL XGBOOST (Q5)",
+    "4. PENJELAJAH BASIS DATA & TABEL"
 ])
 
 
@@ -519,7 +656,7 @@ with tab_input:
             btn_predict = st.form_submit_button("Jalankan Inferensi Model Prediksi Sekarang", use_container_width=True)
             
         if btn_predict:
-            # Siklikal Jam
+            # Transformasi Siklikal Jam
             hour_sin = np.sin(2 * np.pi * hour_in / 24.0)
             hour_cos = np.cos(2 * np.pi * hour_in / 24.0)
             
@@ -547,7 +684,18 @@ with tab_input:
             badge_bg = aqi_res['color']
             badge_text = "#000000" if aqi_res['color'] in ["#FFFF00", "#00E400"] else "#FFFFFF"
             
-            # Kartu Hasil Prediksi (Rapat ke Kiri Tanpa Indentasi Spasi)
+            # Simpan ke sesi lokal
+            log_record = {
+                'prediction_id': len(st.session_state['prediction_logs_memory']) + 1,
+                'predicted_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                'predicted_pm25': pred_pm25,
+                'calculated_aqi': aqi_res['aqi'],
+                'aqi_category': aqi_res['category'],
+                'health_implication': aqi_res['action']
+            }
+            st.session_state['prediction_logs_memory'].insert(0, log_record)
+            
+            # Kartu Hasil Prediksi
             st.markdown(f"""
 <div style="background:#0A192F; border:2px solid #D97706; border-radius:14px; padding:1.8rem 2.2rem; color:#FFFFFF; margin-top:1.4rem; box-shadow:0 10px 25px rgba(10,25,47,0.2);">
 <div style="font-size:0.8rem; font-weight:800; color:#D97706; letter-spacing:0.08em; text-transform:uppercase; margin-bottom:0.6rem;">Hasil Inferensi Prediktif XGBoost Regressor</div>
@@ -572,7 +720,7 @@ with tab_input:
 </div>
 """, unsafe_allow_html=True)
             
-            # Catat ke Database
+            # Catat ke Database MySQL jika tersedia
             engine = get_db_connection()
             if engine is not None:
                 try:
@@ -594,23 +742,30 @@ with tab_input:
                             'impl': aqi_res['action'],
                             'payload': payload_json
                         })
-                    st.success("Log transaksi inferensi berhasil dicatat ke tabel prediction_logs.")
+                    st.success("Log transaksi inferensi berhasil dicatat ke tabel prediction_logs (MySQL).")
                 except Exception as log_err:
                     st.caption(f"Status logging MySQL: {log_err}")
 
-        # Riwayat Log Prediksi
+        # Riwayat Log Prediksi Sesi Ini
         st.markdown("<br>", unsafe_allow_html=True)
-        st.markdown("<div style='font-size:1.05rem; font-weight:800; color:#0A192F; margin-bottom:0.6rem;'>Riwayat Log Inferensi Terkini (Audit Trail Database)</div>", unsafe_allow_html=True)
+        st.markdown("<div style='font-size:1.05rem; font-weight:800; color:#0A192F; margin-bottom:0.6rem;'>Riwayat Log Inferensi Terkini</div>", unsafe_allow_html=True)
+        
+        # Ambil gabungan log database atau session
         engine = get_db_connection()
+        logs_df = pd.DataFrame()
         if engine is not None:
             try:
-                logs_df = pd.read_sql("SELECT prediction_id, predicted_at, predicted_pm25, calculated_aqi, aqi_category FROM prediction_logs ORDER BY predicted_at DESC LIMIT 5", engine)
-                if not logs_df.empty:
-                    st.dataframe(logs_df, use_container_width=True)
-                else:
-                    st.info("Belum ada data inferensi tercatat pada tabel prediction_logs.")
+                logs_df = pd.read_sql("SELECT prediction_id, predicted_at, predicted_pm25, calculated_aqi, aqi_category, health_implication FROM prediction_logs ORDER BY predicted_at DESC LIMIT 5", engine)
             except Exception:
-                st.info("Koneksi tabel log audit MySQL siap di lingkungan basis data lokal.")
+                pass
+                
+        if logs_df.empty and st.session_state['prediction_logs_memory']:
+            logs_df = pd.DataFrame(st.session_state['prediction_logs_memory']).head(5)
+            
+        if not logs_df.empty:
+            st.dataframe(logs_df, use_container_width=True)
+        else:
+            st.info("Belum ada riwayat simulasi inferensi tercatat pada sesi ini.")
 
 
 # ------------------------------------------------------------------------------
@@ -624,7 +779,6 @@ with tab_monitoring:
         aqi_info = calculate_pm25_aqi(latest['pm25'])
         waktu_str = latest['recorded_at'].strftime('%d %b %Y %H:%M') if 'recorded_at' in latest else "Terkini"
         
-        # MENGGUNAKAN KOMPONEN STREAMLIT NATIVE st.metric
         col_m1, col_m2, col_m3, col_m4, col_m5 = st.columns(5)
         with col_m1:
             st.metric(label="Konsentrasi PM2.5", value=f"{latest['pm25']:.1f} µg/m³", delta=f"Obs: {waktu_str}", delta_color="off")
@@ -831,3 +985,88 @@ with tab_evaluasi:
 </ol>
 </div>
 """, unsafe_allow_html=True)
+
+
+# ------------------------------------------------------------------------------
+# TAB 4: PENJELAJAH BASIS DATA & ARSITEKTUR TABEL MULTI-SUMBER
+# ------------------------------------------------------------------------------
+with tab_database:
+    st.markdown("<div style='font-size:1.15rem; font-weight:800; color:#0A192F; margin-bottom:0.3rem;'>Penjelajah Basis Data & Master Feature Store</div>", unsafe_allow_html=True)
+    st.markdown("<div style='font-size:0.88rem; color:#64748B; margin-bottom:1.2rem;'>Modul inspeksi langsung terhadap struktur tabel dan rekaman data dari 3 sumber data (OpenAQ, Open-Meteo, Mobilitas) serta tabel hasil konsolidasi:</div>", unsafe_allow_html=True)
+    
+    table_options = {
+        "master_feature_store": "Tabel Utama: Master Feature Store (Data Gabungan & Rekayasa Fitur)",
+        "raw_air_quality": "Staging 1: Sensor Kualitas Udara (OpenAQ API)",
+        "raw_weather": "Staging 2: Meteorologi Atmosfer (Open-Meteo API)",
+        "raw_traffic_calendar": "Staging 3: Indeks Kemacetan & Kalender (Mobilitas Antropogenik)",
+        "prediction_logs": "Audit Trail: Log Transaksi Inferensi Model (MySQL Database)"
+    }
+    
+    selected_table = st.selectbox(
+        "Pilih Tabel Basis Data untuk Diinspeksi:",
+        options=list(table_options.keys()),
+        format_func=lambda x: table_options[x]
+    )
+    
+    # Ambil data tabel terpilih
+    if selected_table == "prediction_logs":
+        engine = get_db_connection()
+        t_df = pd.DataFrame()
+        source_label = "Live MySQL (Local)"
+        if engine is not None:
+            try:
+                t_df = pd.read_sql("SELECT * FROM prediction_logs ORDER BY predicted_at DESC", engine)
+            except Exception:
+                pass
+        if t_df.empty and st.session_state['prediction_logs_memory']:
+            t_df = pd.DataFrame(st.session_state['prediction_logs_memory'])
+            source_label = "Session Log Storage (Cloud)"
+    else:
+        t_df, source_label = load_individual_table(selected_table)
+        
+    # KPI Informasi Tabel
+    kpi_t1, kpi_t2, kpi_t3 = st.columns(3)
+    with kpi_t1:
+        st.metric("Total Rekaman Data", f"{len(t_df):,} baris")
+    with kpi_t2:
+        st.metric("Jumlah Kolom / Fitur", f"{len(t_df.columns)} kolom" if not t_df.empty else "0 kolom")
+    with kpi_t3:
+        st.metric("Status Penyimpanan", source_label)
+        
+    st.markdown("<br>", unsafe_allow_html=True)
+    
+    if not t_df.empty:
+        # Tampilkan Dataframe Interaktif
+        st.dataframe(t_df, use_container_width=True, height=350)
+        
+        # Tombol Unduh CSV
+        csv_export = t_df.to_csv(index=False).encode('utf-8')
+        st.download_button(
+            label=f"Unduh Data {selected_table}.csv",
+            data=csv_export,
+            file_name=f"{selected_table}_export.csv",
+            mime="text/csv",
+            use_container_width=False
+        )
+        
+        # Informasi Skema Kolom
+        with st.expander(f"Lihat Struktur Skema & Tipe Data Kolom ({selected_table})"):
+            schema_info = pd.DataFrame({
+                "Nama Kolom": t_df.columns,
+                "Tipe Data": [str(dtype) for dtype in t_df.dtypes],
+                "Contoh Nilai Pertama": [str(t_df[col].iloc[0]) if len(t_df) > 0 else "-" for col in t_df.columns]
+            })
+            st.table(schema_info)
+    else:
+        st.warning(f"Tabel {selected_table} belum memiliki rekaman data atau koneksi basis data belum terhubung.")
+
+    # Petunjuk Konfigurasi Database Online / Cloud
+    with st.expander("Informasi Teknis: Menghubungkan Streamlit Cloud ke MySQL Live"):
+        st.markdown("""
+        **Mengapa di Streamlit Cloud berstatus 'Sync Fallback Storage'?**
+        1. Di lingkungan hosting publik Streamlit Cloud (*share.streamlit.io*), firewall internet mencegah server menjangkau IP lokal laptop Anda (`127.0.0.1:3306`).
+        2. Supaya Streamlit Cloud langsung terhubung ke MySQL secara Live:
+           - Anda dapat menggunakan layanan **MySQL Cloud gratis** seperti **Aiven MySQL**, **TiDB Cloud**, atau **Supabase**.
+           - Atau gunakan tunnel **Ngrok** untuk membuka port 3306 lokal Anda ke internet.
+        3. Jika dijalankan di laptop lokal dengan perintah `streamlit run app.py`, aplikasi otomatis mendeteksi MySQL lokal Anda dan berstatus **Live Database**.
+        """)
