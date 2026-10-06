@@ -638,12 +638,12 @@ with st.sidebar:
 </div>
 """, unsafe_allow_html=True)
 
-    # Identitas Peneliti / Mahasiswa
+    # Identitas Mahasiswa
     st.markdown("""
 <div class="profile-card">
-    <div class="p-label">Peneliti / Mahasiswa</div>
+    <div class="p-label">Mahasiswa Pengembang</div>
     <div class="p-val">La Ode Muhamad Dirga</div>
-    <div class="p-code">NIM: 007 • Data Science & AI</div>
+    <div class="p-code">NIM: E1E124007 • Data Science</div>
 </div>
 """, unsafe_allow_html=True)
 
