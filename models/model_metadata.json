@@ -1,0 +1,24 @@
+{
+    "model_name": "XGBoost Regressor PM2.5",
+    "version": "v1.0.0",
+    "metrics": {
+        "mae": 2.46,
+        "rmse": 3.12,
+        "r2_score": 0.7756
+    },
+    "features": [
+        "temperature_c",
+        "humidity_pct",
+        "wind_speed_kmh",
+        "wind_direction_deg",
+        "rainfall_mm",
+        "traffic_index",
+        "is_weekend",
+        "is_holiday",
+        "pm25_lag_1h",
+        "pm25_lag_24h",
+        "pm25_rolling_mean_6h",
+        "hour_sin",
+        "hour_cos"
+    ]
+}

@@ -1,0 +1,61 @@
+version: '3.8'
+
+services:
+  mysql_db:
+    image: mysql:8.0
+    container_name: aqi_mysql_db
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-mlops_root_pass}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-aqi_prediction_db}
+      MYSQL_USER: ${MYSQL_USER:-aqi_user}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-aqi_secure_password}
+    ports:
+      - "${MYSQL_LOCAL_PORT:-3306}:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./sql:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD:-mlops_root_pass}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - aqi-network
+
+  streamlit_dashboard:
+    build:
+      context: .
+      dockerfile: ./dashboard/Dockerfile
+    container_name: aqi_streamlit_dashboard
+    restart: always
+    depends_on:
+      mysql_db:
+        condition: service_healthy
+    environment:
+      MYSQL_HOST: mysql_db
+      MYSQL_PORT: 3306
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-aqi_prediction_db}
+      MYSQL_USER: ${MYSQL_USER:-aqi_user}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-aqi_secure_password}
+      MODEL_PATH: /app/models/xgboost_pm25_model.pkl
+      SCALER_PATH: /app/models/scaler.pkl
+      METADATA_PATH: /app/models/model_metadata.json
+    ports:
+      - "${STREAMLIT_PORT:-8501}:8501"
+    volumes:
+      - ./dashboard:/app/dashboard
+      - ./models:/app/models
+      - ./src:/app/src
+      - ./data:/app/data
+    networks:
+      - aqi-network
+
+networks:
+  aqi-network:
+    name: aqi-mlops-network
+    driver: bridge
+
+volumes:
+  mysql_data:
+    name: aqi_mysql_data_volume
