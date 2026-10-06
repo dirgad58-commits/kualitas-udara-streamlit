@@ -1,8 +1,8 @@
 """
 Streamlit Dashboard: Sistem Prediksi Konsentrasi PM2.5 & Estimasi AQI
 Berbasis Algoritma XGBoost Regressor dan Standar US EPA (Piecewise Linear Interpolation)
-Desain: Premium Enterprise Light Theme (Deep Navy #0A192F & Champagne Gold #D97706)
-Fitur: Mikro-Animasi CSS, Kontras Tinggi 100% Legibel, Bebas Simbol/Emoji Berlebihan
+Tema: Premium Enterprise Light Theme (Deep Navy #0A192F & Champagne Gold #D97706)
+Fitur: Kontras Maksimal (Semua Menu Tab & Metrik Terbaca 100%), Bebas Kode Mentah, Bebas Emotikon Berlebihan
 """
 
 import os
@@ -25,7 +25,7 @@ if ROOT_DIR not in sys.path:
 from src.aqi_calculator import calculate_pm25_aqi, calculate_aqi_dataframe, EPA_PM25_BREAKPOINTS
 
 # ==============================================================================
-# 1. KONFIGURASI HALAMAN & INJEKSI CSS PREMIUM ENTERPRISE
+# 1. KONFIGURASI HALAMAN & INJEKSI CSS ENTERPRISE
 # ==============================================================================
 st.set_page_config(
     page_title="AQI PM2.5 Prediction Engine | XGBoost MLOps",
@@ -34,64 +34,134 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Custom CSS: Deep Navy (#0A192F), Classic Gold (#D97706), Slate Gray (#334155), Pure White (#FFFFFF)
-# Semua teks, label input, slider, dan tombol dipaksa memiliki kontras maksimal agar tidak ada yang hilang
+# Injeksi CSS: Deep Navy (#0A192F), Champagne Gold (#D97706), Soft Slate (#F8FAFC)
+# Menjamin 100% kontras untuk tab menu, widget input, tombol, dan metrik
 st.markdown("""
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com">
-<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700;800&display=swap" rel="stylesheet">
 
 <style>
-/* -------------------------------------------------------------
-   1. GLOBAL RESET & TYPOGRAPHY
-------------------------------------------------------------- */
+/* Reset Global */
 html, body, [class*="css"], .stApp {
-    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif !important;
+    font-family: 'Plus Jakarta Sans', sans-serif !important;
     background-color: #F8FAFC !important;
     color: #0F172A !important;
 }
 
-/* Keyframe Animations */
-@keyframes fadeInSlideUp {
-    0% { opacity: 0; transform: translateY(12px); }
-    100% { opacity: 1; transform: translateY(0); }
+/* --------------------------------------------------------------------------
+   1. MENU TAB - MEMASTIKAN TEKS TAB TIDAK TRANSPARAN & SELALU TERBACA
+-------------------------------------------------------------------------- */
+[data-baseweb="tab-list"] {
+    gap: 1.5rem !important;
+    border-bottom: 2px solid #E2E8F0 !important;
+    margin-bottom: 1.5rem !important;
+    background: transparent !important;
 }
 
-@keyframes goldAccentPulse {
-    0% { box-shadow: 0 0 0 0 rgba(217, 119, 6, 0.25); }
-    70% { box-shadow: 0 0 0 8px rgba(217, 119, 6, 0); }
-    100% { box-shadow: 0 0 0 0 rgba(217, 119, 6, 0); }
+/* Semua Tombol Tab (Aktif & Tidak Aktif) */
+[data-baseweb="tab-list"] button,
+[data-baseweb="tab-list"] button div,
+[data-baseweb="tab-list"] button p,
+button[data-baseweb="tab"],
+button[data-baseweb="tab"] * {
+    font-size: 1.05rem !important;
+    font-weight: 700 !important;
+    opacity: 1 !important;
+    visibility: visible !important;
 }
 
-/* -------------------------------------------------------------
-   2. FIX LABEL WIDGET & FONT KONTRAS (100% TERLIHAT DI SEMUA TEMA)
-------------------------------------------------------------- */
+/* Tab Tidak Aktif: Navy Slate Gelap Kontras Tinggi */
+button[data-baseweb="tab"][aria-selected="false"],
+button[data-baseweb="tab"][aria-selected="false"] * {
+    color: #334155 !important;
+    background: transparent !important;
+    font-weight: 700 !important;
+}
+
+button[data-baseweb="tab"][aria-selected="false"]:hover,
+button[data-baseweb="tab"][aria-selected="false"]:hover * {
+    color: #D97706 !important;
+}
+
+/* Tab Aktif: Deep Navy Pekat dengan Garis Bawah Emas Gold */
+button[data-baseweb="tab"][aria-selected="true"],
+button[data-baseweb="tab"][aria-selected="true"] * {
+    color: #0A192F !important;
+    font-weight: 800 !important;
+}
+
+button[data-baseweb="tab"][aria-selected="true"] {
+    border-bottom: 3.5px solid #D97706 !important;
+    background: rgba(217, 119, 6, 0.08) !important;
+    border-radius: 8px 8px 0 0 !important;
+    padding: 0.6rem 1.2rem !important;
+}
+
+/* --------------------------------------------------------------------------
+   2. METRIK ANGKA (st.metric) - MEMASTIKAN ANGKA TIDAK PUTIH/TRANSPARAN
+-------------------------------------------------------------------------- */
+[data-testid="stMetric"] {
+    background: #FFFFFF !important;
+    border: 1px solid #E2E8F0 !important;
+    border-top: 3.5px solid #0A192F !important;
+    border-radius: 10px !important;
+    padding: 1rem 1.2rem !important;
+    box-shadow: 0 2px 8px rgba(10, 25, 47, 0.03) !important;
+    transition: transform 0.2s ease, border-color 0.2s ease !important;
+}
+
+[data-testid="stMetric"]:hover {
+    transform: translateY(-2px) !important;
+    border-top-color: #D97706 !important;
+}
+
+[data-testid="stMetricValue"],
+[data-testid="stMetricValue"] *,
+[data-testid="stMetricValue"] div {
+    color: #0A192F !important;
+    font-weight: 800 !important;
+    font-size: 1.85rem !important;
+    font-family: 'JetBrains Mono', monospace !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+}
+
+[data-testid="stMetricLabel"],
+[data-testid="stMetricLabel"] *,
+[data-testid="stMetricLabel"] p {
+    color: #64748B !important;
+    font-weight: 700 !important;
+    font-size: 0.8rem !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.04em !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+}
+
+/* --------------------------------------------------------------------------
+   3. LABEL WIDGET INPUT (SLIDER, NUMBER INPUT, DROPDOWN)
+-------------------------------------------------------------------------- */
 label[data-testid="stWidgetLabel"],
 [data-testid="stWidgetLabel"] label,
 [data-testid="stWidgetLabel"] p,
 .stSlider label,
 .stNumberInput label,
-.stSelectbox label,
-.stTextInput label {
+.stSelectbox label {
     color: #0A192F !important;
     font-size: 0.88rem !important;
     font-weight: 700 !important;
     margin-bottom: 0.35rem !important;
-    letter-spacing: -0.01em !important;
-    opacity: 1 !important;
     display: block !important;
     visibility: visible !important;
+    opacity: 1 !important;
 }
 
-/* Angka Nilai pada Slider */
-[data-testid="stSlider"] div[data-testid="stTickBar"] + div,
 [data-testid="stSlider"] [data-baseweb="slider"] div {
     color: #0A192F !important;
     font-weight: 700 !important;
-    font-size: 0.85rem !important;
 }
 
-/* Nilai Input Angka & Dropdown */
 [data-testid="stNumberInput"] input,
 [data-testid="stSelectbox"] div[data-baseweb="select"] {
     background-color: #FFFFFF !important;
@@ -99,23 +169,15 @@ label[data-testid="stWidgetLabel"],
     font-weight: 600 !important;
     border: 1.5px solid #CBD5E1 !important;
     border-radius: 8px !important;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.02) !important;
-    transition: all 0.2s ease !important;
-}
-
-[data-testid="stNumberInput"] input:focus,
-[data-testid="stSelectbox"] div[data-baseweb="select"]:focus-within {
-    border-color: #D97706 !important;
-    box-shadow: 0 0 0 3px rgba(217, 119, 6, 0.15) !important;
 }
 
 [data-testid="stSelectbox"] * {
     color: #0A192F !important;
 }
 
-/* -------------------------------------------------------------
-   3. TOMBOL AKSI SUBMIT (NAVY DENGAN TEKS PUTIH DAN BORDER GOLD)
-------------------------------------------------------------- */
+/* --------------------------------------------------------------------------
+   4. TOMBOL AKSI INFERENSI (NAVY + BORDER GOLD + TEKS PUTIH)
+-------------------------------------------------------------------------- */
 div.stButton > button,
 div[data-testid="stFormSubmitButton"] > button {
     background: #0A192F !important;
@@ -125,13 +187,12 @@ div[data-testid="stFormSubmitButton"] > button {
     font-size: 1.0rem !important;
     letter-spacing: 0.03em !important;
     text-transform: uppercase !important;
-    padding: 0.8rem 2.0rem !important;
+    padding: 0.85rem 2.0rem !important;
     border-radius: 10px !important;
     box-shadow: 0 4px 15px rgba(10, 25, 47, 0.15) !important;
     transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
     cursor: pointer !important;
     width: 100% !important;
-    margin-top: 0.5rem !important;
 }
 
 div.stButton > button *,
@@ -143,278 +204,20 @@ div[data-testid="stFormSubmitButton"] > button * {
 div.stButton > button:hover,
 div[data-testid="stFormSubmitButton"] > button:hover {
     background: #D97706 !important;
-    color: #FFFFFF !important;
     border-color: #0A192F !important;
-    box-shadow: 0 6px 20px rgba(217, 119, 6, 0.35) !important;
+    color: #FFFFFF !important;
     transform: translateY(-2px) !important;
 }
 
-/* -------------------------------------------------------------
-   4. SIDEBAR ENTERPRISE (DEEP NAVY & GOLD ACCENT)
-------------------------------------------------------------- */
+/* --------------------------------------------------------------------------
+   5. SIDEBAR (NAVY THEME)
+-------------------------------------------------------------------------- */
 section[data-testid="stSidebar"] {
     background-color: #0A192F !important;
     border-right: 2px solid #1E293B !important;
 }
 section[data-testid="stSidebar"] * {
     color: #F1F5F9 !important;
-}
-section[data-testid="stSidebar"] hr {
-    border-color: rgba(255, 255, 255, 0.1) !important;
-}
-
-.sidebar-header-box {
-    padding: 0.8rem 0 1.2rem 0;
-    border-bottom: 2px solid #D97706;
-    margin-bottom: 1.2rem;
-}
-.sidebar-title {
-    font-size: 1.25rem;
-    font-weight: 800;
-    letter-spacing: 0.03em;
-    color: #FFFFFF;
-    text-transform: uppercase;
-}
-.sidebar-subtitle {
-    font-size: 0.75rem;
-    font-weight: 700;
-    color: #D97706;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    margin-top: 0.2rem;
-}
-
-.sidebar-metric-card {
-    background: rgba(30, 41, 59, 0.6);
-    border: 1px solid rgba(148, 163, 184, 0.15);
-    border-left: 3px solid #D97706;
-    border-radius: 8px;
-    padding: 0.8rem 1rem;
-    margin-bottom: 0.75rem;
-}
-.sidebar-metric-card .row-label {
-    font-size: 0.78rem;
-    color: #94A3B8;
-    font-weight: 600;
-}
-.sidebar-metric-card .row-val {
-    font-size: 0.88rem;
-    color: #F8FAFC;
-    font-weight: 700;
-    font-family: 'JetBrains Mono', monospace;
-}
-
-/* -------------------------------------------------------------
-   5. HEADER UTAMA (CLEAN CORPORATE BANNER)
-------------------------------------------------------------- */
-.main-banner {
-    background: #FFFFFF;
-    border: 1px solid #E2E8F0;
-    border-left: 6px solid #0A192F;
-    border-radius: 12px;
-    padding: 1.4rem 1.8rem;
-    margin-bottom: 1.4rem;
-    box-shadow: 0 4px 15px rgba(10, 25, 47, 0.04);
-    animation: fadeInSlideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1);
-}
-.main-banner-title {
-    font-size: 1.85rem;
-    font-weight: 800;
-    color: #0A192F;
-    letter-spacing: -0.02em;
-    margin: 0;
-    line-height: 1.2;
-}
-.main-banner-desc {
-    font-size: 0.95rem;
-    color: #475569;
-    font-weight: 500;
-    margin-top: 0.4rem;
-    line-height: 1.5;
-}
-.gold-badge {
-    background: rgba(217, 119, 6, 0.1);
-    color: #B45309;
-    padding: 0.2rem 0.55rem;
-    border-radius: 6px;
-    font-weight: 700;
-    font-size: 0.85rem;
-}
-
-/* -------------------------------------------------------------
-   6. INPUT CARD CONTAINER (FORM KELOMPOK PARAMETER)
-------------------------------------------------------------- */
-.input-section-card {
-    background: #FFFFFF;
-    border: 1px solid #E2E8F0;
-    border-top: 3px solid #0A192F;
-    border-radius: 12px;
-    padding: 1.2rem;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.02);
-    margin-bottom: 1rem;
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-.input-section-card:hover {
-    box-shadow: 0 6px 18px rgba(10, 25, 47, 0.06);
-    border-top-color: #D97706;
-}
-.input-section-title {
-    font-size: 0.92rem;
-    font-weight: 800;
-    color: #0A192F;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    margin-bottom: 1rem;
-    padding-bottom: 0.4rem;
-    border-bottom: 1px solid #F1F5F9;
-}
-
-/* -------------------------------------------------------------
-   7. KARTU HASIL PREDIKSI (SHOWCASE BANNER)
-------------------------------------------------------------- */
-.prediction-result-panel {
-    background: #0A192F;
-    border: 2px solid #D97706;
-    border-radius: 14px;
-    padding: 1.8rem 2.2rem;
-    color: #FFFFFF;
-    margin-top: 1.4rem;
-    box-shadow: 0 10px 25px rgba(10, 25, 47, 0.2);
-    animation: fadeInSlideUp 0.4s ease-out;
-}
-.pred-tagline {
-    font-size: 0.8rem;
-    font-weight: 800;
-    color: #D97706;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    margin-bottom: 0.6rem;
-}
-.pred-primary-num {
-    font-size: 2.9rem;
-    font-weight: 800;
-    color: #FFFFFF;
-    line-height: 1.0;
-    font-family: 'JetBrains Mono', monospace;
-}
-.pred-primary-unit {
-    font-size: 1.15rem;
-    color: #93C5FD;
-    font-weight: 600;
-    font-family: 'Plus Jakarta Sans', sans-serif;
-}
-.pred-secondary-num {
-    font-size: 2.9rem;
-    font-weight: 800;
-    color: #FBBF24;
-    line-height: 1.0;
-    font-family: 'JetBrains Mono', monospace;
-}
-
-.health-pill-badge {
-    display: inline-block;
-    padding: 0.45rem 1.1rem;
-    border-radius: 6px;
-    font-weight: 800;
-    font-size: 0.88rem;
-    letter-spacing: 0.02em;
-    text-transform: uppercase;
-}
-
-/* -------------------------------------------------------------
-   8. TABS STYLING (CLEAN BORDERLESS WITH GOLD ACTIVE INDICATOR)
-------------------------------------------------------------- */
-.stTabs [data-baseweb="tab-list"] {
-    gap: 1.5rem;
-    border-bottom: 2px solid #E2E8F0;
-    margin-bottom: 1.5rem;
-}
-.stTabs [data-baseweb="tab"] {
-    font-size: 1.0rem !important;
-    font-weight: 700 !important;
-    color: #64748B !important;
-    padding: 0.75rem 0.5rem !important;
-    background: transparent !important;
-}
-.stTabs [aria-selected="true"] {
-    color: #0A192F !important;
-    border-bottom: 3px solid #D97706 !important;
-}
-
-/* -------------------------------------------------------------
-   9. KPI METRIC CARDS (LIGHT MODE)
-------------------------------------------------------------- */
-.kpi-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 1rem;
-    margin-bottom: 1.5rem;
-}
-.kpi-card-light {
-    background: #FFFFFF;
-    border: 1px solid #E2E8F0;
-    border-top: 4px solid #0A192F;
-    border-radius: 10px;
-    padding: 1.1rem;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.02);
-    transition: transform 0.2s ease, border-color 0.2s ease;
-}
-.kpi-card-light:hover {
-    transform: translateY(-2px);
-    border-color: #D97706;
-}
-.kpi-card-gold {
-    border-top-color: #D97706;
-}
-.kpi-title-text {
-    font-size: 0.74rem;
-    font-weight: 700;
-    color: #64748B;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    margin-bottom: 0.3rem;
-}
-.kpi-val-text {
-    font-size: 1.85rem;
-    font-weight: 800;
-    color: #0A192F;
-    line-height: 1.1;
-    font-family: 'JetBrains Mono', monospace;
-    margin-bottom: 0.3rem;
-}
-
-/* -------------------------------------------------------------
-   10. MITIGASI PROTOCOL CARDS
-------------------------------------------------------------- */
-.mitigasi-card-clean {
-    background: #FFFFFF;
-    border: 1px solid #E2E8F0;
-    border-radius: 10px;
-    padding: 1.2rem;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.02);
-}
-.mitigasi-card-clean.c-baik { border-left: 5px solid #10B981; }
-.mitigasi-card-clean.c-sedang { border-left: 5px solid #F59E0B; }
-.mitigasi-card-clean.c-sensitif { border-left: 5px solid #F97316; }
-.mitigasi-card-clean.c-kritis { border-left: 5px solid #EF4444; }
-
-.mitigasi-head {
-    font-size: 0.95rem;
-    font-weight: 800;
-    color: #0A192F;
-    margin-bottom: 0.2rem;
-}
-.mitigasi-param {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.8rem;
-    font-weight: 600;
-    color: #64748B;
-    margin-bottom: 0.5rem;
-}
-.mitigasi-body {
-    font-size: 0.84rem;
-    color: #334155;
-    line-height: 1.5;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -528,9 +331,9 @@ def load_ml_artifacts():
 
 
 # ==============================================================================
-# 3. HELPER PLOTLY LIGHT THEME
+# 3. HELPER PLOTLY THEME
 # ==============================================================================
-def apply_plotly_enterprise_theme(fig, title=""):
+def apply_plotly_theme(fig, title=""):
     fig.update_layout(
         title=dict(
             text=f"<b>{title}</b>",
@@ -578,7 +381,7 @@ def add_numpy_ols_trendline(fig, x_series, y_series, name="Garis Regresi OLS"):
 
 
 # ==============================================================================
-# 4. LOAD DATA & SIDEBAR ENTERPRISE
+# 4. LOAD STATE & SIDEBAR
 # ==============================================================================
 df_env, data_source_info = load_environmental_data()
 model, scaler, metadata = load_ml_artifacts()
@@ -588,87 +391,54 @@ if 'aqi' not in df_env.columns and 'pm25' in df_env.columns:
 
 with st.sidebar:
     st.markdown("""
-<div class="sidebar-header-box">
-    <div class="sidebar-title">AQI Predictor AI</div>
-    <div class="sidebar-subtitle">XGBoost MLOps Engine</div>
-</div>
-""", unsafe_allow_html=True)
-    
-    st.caption("Penerapan Regresi Multi-Sumber Berdasarkan Standar US EPA 2024")
-
-    st.markdown("<br>", unsafe_allow_html=True)
-    st.markdown("<div style='font-size:0.8rem; font-weight:700; color:#D97706; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:0.6rem;'>Spesifikasi Pipeline</div>", unsafe_allow_html=True)
-    
-    st.markdown(f"""
-<div class="sidebar-metric-card">
-    <div class="row-label">Sumber Data</div>
-    <div class="row-val">{data_source_info}</div>
-</div>
-
-<div class="sidebar-metric-card">
-    <div class="row-label">Volume Observasi</div>
-    <div class="row-val">{len(df_env):,} baris</div>
+<div style="padding:0.6rem 0 1.0rem 0; border-bottom:2px solid #D97706; margin-bottom:1.0rem;">
+    <div style="font-size:1.25rem; font-weight:800; color:#FFFFFF;">AQI PREDICTOR AI</div>
+    <div style="font-size:0.75rem; font-weight:700; color:#D97706; letter-spacing:0.06em;">XGBOOST MLOPS ENGINE</div>
 </div>
 """, unsafe_allow_html=True)
 
+    st.caption("Estimasi Konsentrasi PM2.5 & Indeks Kualitas Udara (US EPA Revised 2024)")
+    st.markdown("---")
+    
+    st.markdown("**Spesifikasi Pipeline:**")
+    st.markdown(f"• Sumber Data: **{data_source_info}**")
+    st.markdown(f"• Volume Observasi: **{len(df_env):,} baris**")
+    
     r2_val = metadata.get('metrics', {}).get('r2_score', 0.7756) if metadata else 0.7756
     mae_val = metadata.get('metrics', {}).get('mae', 2.46) if metadata else 2.46
     rmse_val = metadata.get('metrics', {}).get('rmse', 3.12) if metadata else 3.12
     ver_val = metadata.get('version', 'v1.0.0') if metadata else 'v1.0.0'
 
-    st.markdown(f"""
-<div class="sidebar-metric-card">
-    <div class="row-label">Versi Model</div>
-    <div class="row-val">{ver_val}</div>
-</div>
+    st.markdown(f"• Versi Model: **{ver_val}**")
+    st.markdown(f"• Skor Akurasi $R^2$: **{r2_val:.4f}**")
+    st.markdown(f"• Error MAE: **{mae_val:.2f} µg/m³**")
+    st.markdown(f"• Error RMSE: **{rmse_val:.2f} µg/m³**")
 
-<div class="sidebar-metric-card">
-    <div class="row-label">Skor Akurasi R²</div>
-    <div class="row-val" style="color:#FBBF24;">{r2_val:.4f}</div>
-</div>
-
-<div class="sidebar-metric-card">
-    <div class="row-label">Mean Absolute Error</div>
-    <div class="row-val">{mae_val:.2f} µg/m³</div>
-</div>
-
-<div class="sidebar-metric-card">
-    <div class="row-label">Root Mean Squared Error</div>
-    <div class="row-val">{rmse_val:.2f} µg/m³</div>
-</div>
-""", unsafe_allow_html=True)
-
-    st.markdown("<div style='font-size:0.8rem; font-weight:700; color:#D97706; text-transform:uppercase; letter-spacing:0.05em; margin:1rem 0 0.6rem 0;'>Infrastruktur & Stasiun</div>", unsafe_allow_html=True)
-    st.markdown("""
-<div class="sidebar-metric-card">
-    <div class="row-label">Lokasi Stasiun</div>
-    <div class="row-val">Jakarta Pusat (LOC-JKT-01)</div>
-</div>
-
-<div class="sidebar-metric-card">
-    <div class="row-label">Orkestrasi Pipeline</div>
-    <div class="row-val">Astronomer Airflow</div>
-</div>
-""", unsafe_allow_html=True)
+    st.markdown("---")
+    st.markdown("**Infrastruktur & Stasiun:**")
+    st.markdown("• Lokasi: **Jakarta Pusat (LOC-JKT-01)**")
+    st.markdown("• Orkestrasi: **Astronomer Airflow**")
 
 
 # ==============================================================================
-# 5. BANNER HEADER UTAMA
+# 5. HEADER UTAMA
 # ==============================================================================
 st.markdown("""
-<div class="main-banner">
-    <div class="main-banner-title">Sistem Prediksi Konsentrasi PM2.5 dan Estimasi Indeks Kualitas Udara</div>
-    <div class="main-banner-desc">
-        Platform komputasi prediktif berbasis algoritma <span class="gold-badge">XGBoost Regressor</span> 
-        yang mengintegrasikan data sensor OpenAQ, meteorologi Open-Meteo, serta dinamika mobilitas lalu lintas komuter 
-        sesuai formulasi Piecewise Linear Interpolation <span class="gold-badge">US EPA Revised 2024</span>.
+<div style="background:#FFFFFF; border:1px solid #E2E8F0; border-left:6px solid #0A192F; border-radius:12px; padding:1.4rem 1.8rem; margin-bottom:1.4rem; box-shadow:0 4px 15px rgba(10,25,47,0.04);">
+    <div style="font-size:1.85rem; font-weight:800; color:#0A192F; line-height:1.2; margin:0;">
+        Sistem Prediksi Konsentrasi PM2.5 dan Estimasi Indeks Kualitas Udara
+    </div>
+    <div style="font-size:0.95rem; color:#475569; font-weight:500; margin-top:0.4rem; line-height:1.5;">
+        Platform komputasi prediktif berbasis algoritma <span style="background:rgba(217,119,6,0.1); color:#B45309; padding:0.2rem 0.5rem; border-radius:6px; font-weight:700;">XGBoost Regressor</span> 
+        yang mengintegrasikan data sensor OpenAQ, meteorologi Open-Meteo, serta dinamika mobilitas lalu lintas 
+        sesuai formulasi Piecewise Linear Interpolation <span style="background:rgba(217,119,6,0.1); color:#B45309; padding:0.2rem 0.5rem; border-radius:6px; font-weight:700;">US EPA Revised 2024</span>.
     </div>
 </div>
 """, unsafe_allow_html=True)
 
 
 # ==============================================================================
-# 6. TAB UTAMA: TAB 1 LANGSUNG SEBAGAI FORM INPUT USER
+# 6. TAB UTAMA
 # ==============================================================================
 tab_input, tab_monitoring, tab_evaluasi = st.tabs([
     "Simulator Prediksi AI (Input Pengguna)",
@@ -678,46 +448,34 @@ tab_input, tab_monitoring, tab_evaluasi = st.tabs([
 
 
 # ------------------------------------------------------------------------------
-# TAB 1: SIMULATOR PREDIKSI AI (INPUT USER)
+# TAB 1: SIMULATOR PREDIKSI AI (INPUT PENGGUNA)
 # ------------------------------------------------------------------------------
 with tab_input:
-    st.markdown("<div style='font-size:1.15rem; font-weight:800; color:#0A192F; margin-bottom:0.3rem;'>Formulir Parameter Simulasi Lingkungan</div>", unsafe_allow_html=True)
+    st.markdown("<div style='font-size:1.15rem; font-weight:800; color:#0A192F; margin-bottom:0.2rem;'>Formulir Parameter Simulasi Lingkungan</div>", unsafe_allow_html=True)
     st.markdown("<div style='font-size:0.88rem; color:#64748B; margin-bottom:1.2rem;'>Atur nilai-nilai variabel di bawah ini untuk menguji respons inferensi prediktif model XGBoost terhadap kondisi atmosfer dan beban lalu lintas:</div>", unsafe_allow_html=True)
     
     if model is None or scaler is None:
         st.error("Artefak model (xgboost_pm25_model.pkl atau scaler.pkl) belum ditemukan di folder models/.")
     else:
-        with st.form("clean_enterprise_prediction_form"):
+        with st.form("main_clean_prediction_form"):
             col_f1, col_f2, col_f3 = st.columns(3)
             
             with col_f1:
-                st.markdown("""
-<div class="input-section-card">
-    <div class="input-section-title">Parameter Meteorologi Atmosfer</div>
-</div>
-""", unsafe_allow_html=True)
+                st.markdown("<div style='font-size:0.92rem; font-weight:800; color:#0A192F; text-transform:uppercase; letter-spacing:0.04em; margin-bottom:0.8rem; padding-bottom:0.3rem; border-bottom:2px solid #E2E8F0;'>Parameter Meteorologi Atmosfer</div>", unsafe_allow_html=True)
                 temp_in = st.slider("Suhu Udara (°C)", min_value=18.0, max_value=42.0, value=30.0, step=0.5)
                 humid_in = st.slider("Kelembaban Relatif (%)", min_value=20.0, max_value=100.0, value=75.0, step=1.0)
                 wind_in = st.slider("Kecepatan Angin (km/jam)", min_value=1.0, max_value=45.0, value=12.0, step=0.5)
                 rain_in = st.slider("Curah Hujan (mm)", min_value=0.0, max_value=50.0, value=0.0, step=0.5)
                 
             with col_f2:
-                st.markdown("""
-<div class="input-section-card">
-    <div class="input-section-title">Parameter Mobilitas & Temporal</div>
-</div>
-""", unsafe_allow_html=True)
+                st.markdown("<div style='font-size:0.92rem; font-weight:800; color:#0A192F; text-transform:uppercase; letter-spacing:0.04em; margin-bottom:0.8rem; padding-bottom:0.3rem; border-bottom:2px solid #E2E8F0;'>Parameter Mobilitas & Temporal</div>", unsafe_allow_html=True)
                 traffic_in = st.slider("Indeks Kemacetan Lalu Lintas (0 - 100)", min_value=0.0, max_value=100.0, value=70.0, step=5.0)
                 hour_in = st.slider("Jam dalam Sehari (WIB)", min_value=0, max_value=23, value=8)
                 is_weekend_in = st.selectbox("Klasifikasi Hari Kerja:", options=[0, 1], format_func=lambda x: "Akhir Pekan (Sabtu / Minggu)" if x == 1 else "Hari Kerja Aktif (Senin - Jumat)")
                 is_holiday_in = st.selectbox("Status Hari Libur:", options=[0, 1], format_func=lambda x: "Hari Libur Nasional" if x == 1 else "Hari Biasa")
                 
             with col_f3:
-                st.markdown("""
-<div class="input-section-card">
-    <div class="input-section-title">Riwayat Historis (Fitur Lag)</div>
-</div>
-""", unsafe_allow_html=True)
+                st.markdown("<div style='font-size:0.92rem; font-weight:800; color:#0A192F; text-transform:uppercase; letter-spacing:0.04em; margin-bottom:0.8rem; padding-bottom:0.3rem; border-bottom:2px solid #E2E8F0;'>Riwayat Historis (Fitur Lag)</div>", unsafe_allow_html=True)
                 lag1_in = st.number_input("PM2.5 1 Jam Sebelumnya (µg/m³)", min_value=0.0, max_value=250.0, value=45.0, step=1.0)
                 lag24_in = st.number_input("PM2.5 24 Jam Sebelumnya (µg/m³)", min_value=0.0, max_value=250.0, value=42.0, step=1.0)
                 roll6_in = st.number_input("Rata-rata PM2.5 6 Jam Terakhir (µg/m³)", min_value=0.0, max_value=250.0, value=44.0, step=1.0)
@@ -727,7 +485,7 @@ with tab_input:
             btn_predict = st.form_submit_button("Jalankan Inferensi Model Prediksi Sekarang", use_container_width=True)
             
         if btn_predict:
-            # Transformasi Jam Siklikal
+            # Siklikal Jam
             hour_sin = np.sin(2 * np.pi * hour_in / 24.0)
             hour_cos = np.cos(2 * np.pi * hour_in / 24.0)
             
@@ -747,44 +505,40 @@ with tab_input:
                 'hour_cos': hour_cos
             }])
             
-            # Penskalaan dan Prediksi Model XGBoost
             input_scaled = scaler.transform(input_df)
             pred_pm25 = float(model.predict(input_scaled)[0])
             pred_pm25 = max(1.0, round(pred_pm25, 2))
             
-            # Perhitungan AQI Standar US EPA
             aqi_res = calculate_pm25_aqi(pred_pm25)
             badge_bg = aqi_res['color']
             badge_text = "#000000" if aqi_res['color'] in ["#FFFF00", "#00E400"] else "#FFFFFF"
             
-            # Tampilan Hasil Prediksi Enterprise Navy & Gold
+            # Kartu Hasil Prediksi (Rapat ke Kiri Tanpa Indentasi Spasi)
             st.markdown(f"""
-<div class="prediction-result-panel">
-    <div class="pred-tagline">Hasil Inferensi Prediktif XGBoost Regressor</div>
-    <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 2.0rem;">
-        <div>
-            <div class="pred-primary-num">{pred_pm25} <span class="pred-primary-unit">µg/m³</span></div>
-            <div style="color: #94A3B8; font-size: 0.88rem; margin-top: 0.35rem; font-weight: 500;">Estimasi Konsentrasi PM2.5</div>
-        </div>
-        
-        <div style="text-align: center;">
-            <div class="pred-secondary-num">{aqi_res['aqi']} <span style="font-size: 1.15rem; color: #CBD5E1; font-family: 'Plus Jakarta Sans', sans-serif;">/ 500</span></div>
-            <div style="color: #94A3B8; font-size: 0.88rem; margin-top: 0.35rem; font-weight: 500;">Skor Indeks US EPA AQI</div>
-        </div>
-
-        <div style="min-width: 260px; max-width: 320px;">
-            <div class="health-pill-badge" style="background: {badge_bg}; color: {badge_text}; margin-bottom: 0.5rem;">
-                {aqi_res['category']}
-            </div>
-            <div style="font-size: 0.85rem; color: #E2E8F0; line-height: 1.45;">
-                <b style="color: #D97706;">Protokol Kesehatan:</b> {aqi_res['action']}
-            </div>
-        </div>
-    </div>
+<div style="background:#0A192F; border:2px solid #D97706; border-radius:14px; padding:1.8rem 2.2rem; color:#FFFFFF; margin-top:1.4rem; box-shadow:0 10px 25px rgba(10,25,47,0.2);">
+<div style="font-size:0.8rem; font-weight:800; color:#D97706; letter-spacing:0.08em; text-transform:uppercase; margin-bottom:0.6rem;">Hasil Inferensi Prediktif XGBoost Regressor</div>
+<div style="display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:2.0rem;">
+<div>
+<div style="font-size:2.9rem; font-weight:800; color:#FFFFFF; line-height:1.0; font-family:'JetBrains Mono', monospace;">{pred_pm25} <span style="font-size:1.15rem; color:#93C5FD; font-family:'Plus Jakarta Sans', sans-serif; font-weight:600;">µg/m³</span></div>
+<div style="color:#94A3B8; font-size:0.88rem; margin-top:0.35rem;">Estimasi Konsentrasi PM2.5</div>
+</div>
+<div style="text-align:center;">
+<div style="font-size:2.9rem; font-weight:800; color:#FBBF24; line-height:1.0; font-family:'JetBrains Mono', monospace;">{aqi_res['aqi']} <span style="font-size:1.15rem; color:#CBD5E1; font-family:'Plus Jakarta Sans', sans-serif;">/ 500</span></div>
+<div style="color:#94A3B8; font-size:0.88rem; margin-top:0.35rem;">Skor Indeks US EPA AQI</div>
+</div>
+<div style="min-width:260px; max-width:320px;">
+<div style="display:inline-block; padding:0.45rem 1.1rem; border-radius:6px; font-weight:800; font-size:0.88rem; background:{badge_bg}; color:{badge_text}; margin-bottom:0.5rem;">
+{aqi_res['category']}
+</div>
+<div style="font-size:0.85rem; color:#E2E8F0; line-height:1.45;">
+<b style="color:#D97706;">Protokol Kesehatan:</b> {aqi_res['action']}
+</div>
+</div>
+</div>
 </div>
 """, unsafe_allow_html=True)
             
-            # Auto-Log ke Database MySQL
+            # Catat ke Database
             engine = get_db_connection()
             if engine is not None:
                 try:
@@ -836,44 +590,22 @@ with tab_monitoring:
         aqi_info = calculate_pm25_aqi(latest['pm25'])
         waktu_str = latest['recorded_at'].strftime('%d %b %Y %H:%M') if 'recorded_at' in latest else "Terkini"
         
-        st.markdown(f"""
-<div class="kpi-grid">
-    <div class="kpi-card-light">
-        <div class="kpi-title-text">Konsentrasi PM2.5</div>
-        <div class="kpi-val-text">{latest['pm25']:.1f} <span style="font-size:0.85rem; color:#64748B;">µg/m³</span></div>
-        <div style="font-size:0.75rem; color:#94A3B8;">Waktu: {waktu_str}</div>
-    </div>
-    
-    <div class="kpi-card-light kpi-card-gold">
-        <div class="kpi-title-text">Indeks AQI EPA</div>
-        <div class="kpi-val-text" style="color:#D97706;">{aqi_info['aqi']} <span style="font-size:0.85rem; color:#64748B;">/ 500</span></div>
-        <div style="font-size:0.8rem; font-weight:700; color:{aqi_info['color']};">{aqi_info['category']}</div>
-    </div>
-
-    <div class="kpi-card-light">
-        <div class="kpi-title-text">Suhu Permukaan</div>
-        <div class="kpi-val-text">{latest.get('temperature_c', 28.5):.1f} <span style="font-size:0.85rem; color:#64748B;">°C</span></div>
-        <div style="font-size:0.75rem; color:#94A3B8;">Sensor Open-Meteo</div>
-    </div>
-
-    <div class="kpi-card-light">
-        <div class="kpi-title-text">Kelembaban Relatif</div>
-        <div class="kpi-val-text">{latest.get('humidity_pct', 75.0):.0f} <span style="font-size:0.85rem; color:#64748B;">%</span></div>
-        <div style="font-size:0.75rem; color:#94A3B8;">Kondisi Hidrometeorologis</div>
-    </div>
-
-    <div class="kpi-card-light">
-        <div class="kpi-title-text">Kecepatan Angin</div>
-        <div class="kpi-val-text">{latest.get('wind_speed_kmh', 10.0):.1f} <span style="font-size:0.85rem; color:#64748B;">km/h</span></div>
-        <div style="font-size:0.75rem; color:#94A3B8;">Faktor Dispersi Partikulat</div>
-    </div>
-</div>
-""", unsafe_allow_html=True)
+        # MENGGUNAKAN KOMPONEN STREAMLIT NATIVE st.metric AGAR 100% BEBAS DARI KODE MENTAH HTML
+        col_m1, col_m2, col_m3, col_m4, col_m5 = st.columns(5)
+        with col_m1:
+            st.metric(label="Konsentrasi PM2.5", value=f"{latest['pm25']:.1f} µg/m³", delta=f"Obs: {waktu_str}", delta_color="off")
+        with col_m2:
+            st.metric(label="Indeks AQI EPA", value=f"{aqi_info['aqi']} / 500", delta=aqi_info['category'], delta_color="normal")
+        with col_m3:
+            st.metric(label="Suhu Permukaan", value=f"{latest.get('temperature_c', 28.5):.1f} °C", delta="Sensor Open-Meteo", delta_color="off")
+        with col_m4:
+            st.metric(label="Kelembaban Relatif", value=f"{latest.get('humidity_pct', 75.0):.0f} %", delta="Hidrometeorologi", delta_color="off")
+        with col_m5:
+            st.metric(label="Kecepatan Angin", value=f"{latest.get('wind_speed_kmh', 10.0):.1f} km/h", delta="Faktor Dispersi", delta_color="off")
 
         st.markdown("---")
         st.markdown("<div style='font-size:1.05rem; font-weight:800; color:#0A192F; margin-bottom:0.4rem;'>1. Fluktuasi Tren Historis PM2.5 (Menjawab Q1)</div>", unsafe_allow_html=True)
         
-        # Runtun Waktu PM2.5
         fig_trend = px.line(
             df_env,
             x='recorded_at',
@@ -888,7 +620,7 @@ with tab_monitoring:
             annotation_text="Ambang Batas Kritis Tidak Sehat EPA (55.4 µg/m³)",
             annotation_position="top right"
         )
-        fig_trend = apply_plotly_enterprise_theme(fig_trend, "Runtun Waktu Konsentrasi Partikulat PM2.5")
+        fig_trend = apply_plotly_theme(fig_trend, "Runtun Waktu Konsentrasi Partikulat PM2.5")
         st.plotly_chart(fig_trend, use_container_width=True)
         
         col_q1_a, col_q1_b = st.columns([1.2, 1])
@@ -913,7 +645,7 @@ with tab_monitoring:
                 marker=dict(colors=colors_list),
                 textinfo='label+percent'
             )])
-            fig_pie = apply_plotly_enterprise_theme(fig_pie, "Distribusi Frekuensi Kategori Kualitas Udara (US EPA)")
+            fig_pie = apply_plotly_theme(fig_pie, "Distribusi Frekuensi Kategori Kualitas Udara (US EPA)")
             st.plotly_chart(fig_pie, use_container_width=True)
             
         with col_q1_b:
@@ -921,13 +653,13 @@ with tab_monitoring:
             unhealthy_pct = (df_env['pm25'] > 55.4).mean() * 100
             st.markdown(f"""
 <div style="background:#FFFFFF; border:1px solid #E2E8F0; border-left:4px solid #0A192F; border-radius:10px; padding:1.2rem; box-shadow:0 2px 8px rgba(0,0,0,0.02);">
-    <div style="font-weight:800; color:#0A192F; font-size:1.0rem; margin-bottom:0.5rem;">Analisis Baseline Profil (Q1)</div>
-    <ul style="color:#334155; font-size:0.86rem; line-height:1.6; margin:0; padding-left:1.2rem;">
-        <li><b>Rata-rata Konsentrasi:</b> <span style="color:#0A192F; font-weight:700;">{df_env['pm25'].mean():.2f} µg/m³</span>.</li>
-        <li><b>Proporsi Udara Aman:</b> <span style="color:#10B981; font-weight:700;">{safe_pct:.1f}%</span> dari keseluruhan periode observasi.</li>
-        <li><b>Proporsi Udara Kritis:</b> <span style="color:#EF4444; font-weight:700;">{unhealthy_pct:.1f}%</span> (Kategori Tidak Sehat).</li>
-        <li><b>Kesimpulan:</b> Beban polusi didominasi kategori Sedang dengan eksaserbasi periodik saat periode mobilitas tinggi.</li>
-    </ul>
+<div style="font-weight:800; color:#0A192F; font-size:1.0rem; margin-bottom:0.5rem;">Analisis Baseline Profil (Q1)</div>
+<ul style="color:#334155; font-size:0.86rem; line-height:1.6; margin:0; padding-left:1.2rem;">
+<li><b>Rata-rata Konsentrasi:</b> <span style="color:#0A192F; font-weight:700;">{df_env['pm25'].mean():.2f} µg/m³</span>.</li>
+<li><b>Proporsi Udara Aman:</b> <span style="color:#10B981; font-weight:700;">{safe_pct:.1f}%</span> dari keseluruhan periode observasi.</li>
+<li><b>Proporsi Udara Kritis:</b> <span style="color:#EF4444; font-weight:700;">{unhealthy_pct:.1f}%</span> (Kategori Tidak Sehat).</li>
+<li><b>Kesimpulan:</b> Beban polusi didominasi kategori Sedang dengan eksaserbasi periodik saat periode mobilitas tinggi.</li>
+</ul>
 </div>
 """, unsafe_allow_html=True)
 
@@ -945,7 +677,7 @@ with tab_monitoring:
                 color_continuous_scale='Viridis'
             )
             add_numpy_ols_trendline(fig_scatter, df_env['wind_speed_kmh'], df_env['pm25'], "Garis Regresi OLS")
-            fig_scatter = apply_plotly_enterprise_theme(fig_scatter, "Dispersi Angin & Kelembaban terhadap PM2.5")
+            fig_scatter = apply_plotly_theme(fig_scatter, "Dispersi Angin & Kelembaban terhadap PM2.5")
             st.plotly_chart(fig_scatter, use_container_width=True)
             
             st.info("""
@@ -972,7 +704,7 @@ with tab_monitoring:
                 line=dict(color="#0A192F", width=2, dash="dot"),
                 mode='lines'
             ))
-            fig_hour = apply_plotly_enterprise_theme(fig_hour, "Siklus Diurnal 24 Jam: Puncak Emisi Jam Sibuk")
+            fig_hour = apply_plotly_theme(fig_hour, "Siklus Diurnal 24 Jam: Puncak Emisi Jam Sibuk")
             fig_hour.update_layout(xaxis=dict(tickmode='linear', tick0=0, dtick=2))
             st.plotly_chart(fig_hour, use_container_width=True)
             
@@ -985,30 +717,30 @@ with tab_monitoring:
         st.markdown("---")
         st.markdown("<div style='font-size:1.05rem; font-weight:800; color:#0A192F; margin-bottom:0.6rem;'>4. Pedoman Intervensi dan Mitigasi Kesehatan (Menjawab Q4)</div>", unsafe_allow_html=True)
         st.markdown("""
-<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 1rem;">
-    <div class="mitigasi-card-clean c-baik">
-        <div class="mitigasi-head">Kategori Baik</div>
-        <div class="mitigasi-param">0.0 – 9.0 µg/m³</div>
-        <div class="mitigasi-body">Kualitas udara sangat memuaskan. Tidak ada pembatasan aktivitas luar ruangan untuk seluruh populasi.</div>
-    </div>
-    
-    <div class="mitigasi-card-clean c-sedang">
-        <div class="mitigasi-head">Kategori Sedang</div>
-        <div class="mitigasi-param">9.1 – 35.4 µg/m³</div>
-        <div class="mitigasi-body">Kualitas udara dapat diterima. Kelompok sangat sensitif disarankan mengurangi aktivitas fisik intensif berkepanjangan di luar.</div>
-    </div>
+<div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(230px, 1fr)); gap:1rem;">
+<div style="background:#FFFFFF; border:1px solid #E2E8F0; border-left:5px solid #10B981; border-radius:10px; padding:1.2rem;">
+<div style="font-size:0.95rem; font-weight:800; color:#0A192F;">Kategori Baik</div>
+<div style="font-family:'JetBrains Mono', monospace; font-size:0.8rem; font-weight:600; color:#64748B; margin-bottom:0.5rem;">0.0 – 9.0 µg/m³</div>
+<div style="font-size:0.84rem; color:#334155; line-height:1.5;">Kualitas udara sangat memuaskan. Tidak ada pembatasan aktivitas luar ruangan untuk seluruh populasi.</div>
+</div>
 
-    <div class="mitigasi-card-clean c-sensitif">
-        <div class="mitigasi-head">Kelompok Sensitif</div>
-        <div class="mitigasi-param">35.5 – 55.4 µg/m³</div>
-        <div class="mitigasi-body">Anak-anak, lansia, dan penderita gangguan respirasi dianjurkan memakai masker filtrasi dan menyalakan air purifier di dalam ruang.</div>
-    </div>
+<div style="background:#FFFFFF; border:1px solid #E2E8F0; border-left:5px solid #F59E0B; border-radius:10px; padding:1.2rem;">
+<div style="font-size:0.95rem; font-weight:800; color:#0A192F;">Kategori Sedang</div>
+<div style="font-family:'JetBrains Mono', monospace; font-size:0.8rem; font-weight:600; color:#64748B; margin-bottom:0.5rem;">9.1 – 35.4 µg/m³</div>
+<div style="font-size:0.84rem; color:#334155; line-height:1.5;">Kualitas udara dapat diterima. Kelompok sangat sensitif disarankan mengurangi aktivitas fisik intensif berkepanjangan di luar.</div>
+</div>
 
-    <div class="mitigasi-card-clean c-kritis">
-        <div class="mitigasi-head">Tidak Sehat</div>
-        <div class="mitigasi-param">> 55.4 µg/m³</div>
-        <div class="mitigasi-body">Masyarakat umum rentan mengalami dampak kesehatan. Tutup ventilasi rumah saat jam sibuk dan gunakan masker standar N95 jika beraktivitas luar.</div>
-    </div>
+<div style="background:#FFFFFF; border:1px solid #E2E8F0; border-left:5px solid #F97316; border-radius:10px; padding:1.2rem;">
+<div style="font-size:0.95rem; font-weight:800; color:#0A192F;">Kelompok Sensitif</div>
+<div style="font-family:'JetBrains Mono', monospace; font-size:0.8rem; font-weight:600; color:#64748B; margin-bottom:0.5rem;">35.5 – 55.4 µg/m³</div>
+<div style="font-size:0.84rem; color:#334155; line-height:1.5;">Anak-anak, lansia, dan penderita gangguan respirasi dianjurkan memakai masker filtrasi dan menyalakan air purifier di dalam ruang.</div>
+</div>
+
+<div style="background:#FFFFFF; border:1px solid #E2E8F0; border-left:5px solid #EF4444; border-radius:10px; padding:1.2rem;">
+<div style="font-size:0.95rem; font-weight:800; color:#0A192F;">Tidak Sehat</div>
+<div style="font-family:'JetBrains Mono', monospace; font-size:0.8rem; font-weight:600; color:#64748B; margin-bottom:0.5rem;">> 55.4 µg/m³</div>
+<div style="font-size:0.84rem; color:#334155; line-height:1.5;">Masyarakat umum rentan mengalami dampak kesehatan. Tutup ventilasi rumah saat jam sibuk dan gunakan masker standar N95 jika beraktivitas luar.</div>
+</div>
 </div>
 """, unsafe_allow_html=True)
 
@@ -1052,16 +784,16 @@ with tab_evaluasi:
             color='Importance',
             color_continuous_scale=[[0, '#0A192F'], [0.5, '#1E3A8A'], [1, '#D97706']]
         )
-        fig_imp = apply_plotly_enterprise_theme(fig_imp, "Kontribusi Relatif Fitur dalam Estimasi PM2.5 (XGBoost Regressor)")
+        fig_imp = apply_plotly_theme(fig_imp, "Kontribusi Relatif Fitur dalam Estimasi PM2.5 (XGBoost Regressor)")
         st.plotly_chart(fig_imp, use_container_width=True)
         
         st.markdown("""
 <div style="background:#FFFFFF; border:1px solid #E2E8F0; border-left:4px solid #D97706; border-radius:10px; padding:1.2rem; margin-top:1.0rem;">
-    <div style="font-weight:800; color:#0A192F; font-size:1.0rem; margin-bottom:0.4rem;">Kesimpulan Ilmiah Evaluasi Model (Menjawab Q5):</div>
-    <ol style="color:#334155; font-size:0.86rem; line-height:1.6; margin:0; padding-left:1.2rem;">
-        <li>Fitur <b><code>pm25_lag_1h</code></b> dan <b><code>pm25_rolling_mean_6h</code></b> memberikan kontribusi terbesar dalam model XGBoost. Hal ini membuktikan konsentrasi polutan memiliki sifat <i>autoregresif temporal kuat</i> (kondisi 1 jam sebelumnya menjadi prediktor primer kondisi saat ini).</li>
-        <li>Variabel <b><code>humidity_pct</code></b> dan <b><code>wind_speed_kmh</code></b> merupakan pengendali fisis utama proses dispersi atmosferik.</li>
-        <li>Fitur siklikal jam (<code>hour_sin</code>, <code>hour_cos</code>) dan indeks kemacetan secara konsisten merefleksikan variabilitas mobilitas antropogenik harian.</li>
-    </ol>
+<div style="font-weight:800; color:#0A192F; font-size:1.0rem; margin-bottom:0.4rem;">Kesimpulan Ilmiah Evaluasi Model (Menjawab Q5):</div>
+<ol style="color:#334155; font-size:0.86rem; line-height:1.6; margin:0; padding-left:1.2rem;">
+<li>Fitur <b><code>pm25_lag_1h</code></b> dan <b><code>pm25_rolling_mean_6h</code></b> memberikan kontribusi terbesar dalam model XGBoost. Hal ini membuktikan konsentrasi polutan memiliki sifat <i>autoregresif temporal kuat</i> (kondisi 1 jam sebelumnya menjadi prediktor primer kondisi saat ini).</li>
+<li>Variabel <b><code>humidity_pct</code></b> dan <b><code>wind_speed_kmh</code></b> merupakan pengendali fisis utama proses dispersi atmosferik.</li>
+<li>Fitur siklikal jam (<code>hour_sin</code>, <code>hour_cos</code>) dan indeks kemacetan secara konsisten merefleksikan variabilitas mobilitas antropogenik harian.</li>
+</ol>
 </div>
 """, unsafe_allow_html=True)
