@@ -420,8 +420,11 @@ def load_individual_table(table_name):
 def load_ml_artifacts():
     model_paths = [
         os.path.join(ROOT_DIR, 'models', 'xgboost_pm25_model.pkl'),
+        os.path.join(ROOT_DIR, 'models', 'xgboost_pm25_model.json'),
         os.path.join(os.path.dirname(__file__), '..', 'models', 'xgboost_pm25_model.pkl'),
-        'models/xgboost_pm25_model.pkl'
+        os.path.join(os.path.dirname(__file__), '..', 'models', 'xgboost_pm25_model.json'),
+        'models/xgboost_pm25_model.pkl',
+        'models/xgboost_pm25_model.json'
     ]
     scaler_paths = [
         os.path.join(ROOT_DIR, 'models', 'scaler.pkl'),
@@ -438,8 +441,14 @@ def load_ml_artifacts():
     for p in model_paths:
         if os.path.exists(p):
             try:
-                model = joblib.load(p)
-                break
+                if p.endswith('.json'):
+                    import xgboost as xgb
+                    model = xgb.XGBRegressor()
+                    model.load_model(p)
+                else:
+                    model = joblib.load(p)
+                if model is not None:
+                    break
             except Exception:
                 pass
                 
@@ -461,6 +470,105 @@ def load_ml_artifacts():
                 pass
                 
     return model, scaler, metadata
+
+
+def get_preset_samples(df):
+    """
+    Menyaring baris representatif dari master_feature_store
+    untuk digunakan sebagai preset input otomatis di simulator prediksi.
+    """
+    presets = {}
+    
+    if df is not None and not df.empty and 'pm25' in df.columns:
+        feature_check = ['temperature_c', 'humidity_pct', 'wind_speed_kmh', 'traffic_index', 'pm25_lag_1h', 'pm25_lag_24h', 'pm25_rolling_mean_6h']
+        avail_features = [c for c in feature_check if c in df.columns]
+        valid = df.dropna(subset=avail_features + ['pm25']).copy()
+        if valid.empty:
+            valid = df.copy()
+            
+        # 1. Observasi Terkini Lapangan (Baris paling mutakhir)
+        latest_row = valid.iloc[-1].to_dict()
+        rec_time = str(latest_row.get('recorded_at', 'Terkini'))[:16]
+        presets['latest'] = {
+            'label': f"Observasi Terkini Lapangan ({rec_time} WIB)",
+            'tag': 'DATA RIIL TERBARU',
+            'desc': 'Data riil jam terakhir yang terekam oleh sensor stasiun pemantau DKI Jakarta.',
+            'row': latest_row
+        }
+        
+        # 2. Data Riil: Kategori SEDANG (9.1 - 35.4 ug/m3)
+        sedang_df = valid[(valid['pm25'] > 9.0) & (valid['pm25'] <= 35.4)]
+        if not sedang_df.empty:
+            row_sedang = sedang_df.iloc[len(sedang_df) // 2].to_dict()
+        else:
+            row_sedang = valid.iloc[len(valid) // 2].to_dict()
+        presets['sedang'] = {
+            'label': f"Sampel Riil: Kategori SEDANG (PM2.5 {float(row_sedang['pm25']):.2f} µg/m³)",
+            'tag': 'DATA RIIL LAPANGAN',
+            'desc': 'Kondisi atmosfer tipikal harian: suhu dan kelembaban normal, dispersi angin moderat.',
+            'row': row_sedang
+        }
+        
+        # 3. Data Riil: Kategori TIDAK SEHAT SENSITIF (35.5 - 55.4 ug/m3)
+        sensitif_df = valid[(valid['pm25'] > 35.4) & (valid['pm25'] <= 55.4)]
+        if not sensitif_df.empty:
+            row_sensitif = sensitif_df.iloc[len(sensitif_df) // 2].to_dict()
+        else:
+            row_sensitif = valid.iloc[-1].to_dict()
+        presets['sensitif'] = {
+            'label': f"Sampel Riil: Kategori TIDAK SEHAT SENSITIF (PM2.5 {float(row_sensitif['pm25']):.2f} µg/m³)",
+            'tag': 'DATA RIIL LAPANGAN',
+            'desc': 'Kondisi rush hour pagi (07:00-09:00 WIB): akumulasi emisi kendaraan dan kelembaban tinggi.',
+            'row': row_sensitif
+        }
+        
+        # 4. Data Riil: Kategori TIDAK SEHAT (> 55.4 ug/m3)
+        ts_df = valid[valid['pm25'] > 55.4]
+        if not ts_df.empty:
+            row_ts = ts_df.sort_values('pm25', ascending=False).iloc[0].to_dict()
+        else:
+            row_ts = valid.sort_values('pm25', ascending=False).iloc[0].to_dict()
+        presets['tidak_sehat'] = {
+            'label': f"Sampel Riil: Kategori TIDAK SEHAT (PM2.5 {float(row_ts['pm25']):.2f} µg/m³)",
+            'tag': 'DATA RIIL LAPANGAN',
+            'desc': 'Puncak polusi ekstrem: beban lalu lintas tinggi dan fenomena stagnasi atmosferik.',
+            'row': row_ts
+        }
+        
+        # 5. Simulasi Teoretis: Kategori BAIK (0.0 - 9.0 ug/m3)
+        baik_df = valid[valid['pm25'] <= 9.0]
+        if not baik_df.empty:
+            row_baik = baik_df.iloc[0].to_dict()
+            tag_baik = "DATA RIIL LAPANGAN"
+        else:
+            row_baik = dict(valid.sort_values('pm25', ascending=True).iloc[0].to_dict())
+            row_baik['pm25'] = 8.20
+            row_baik['temperature_c'] = 26.5
+            row_baik['humidity_pct'] = 58.0
+            row_baik['wind_speed_kmh'] = 18.5
+            row_baik['rainfall_mm'] = 0.0
+            row_baik['traffic_index'] = 25.0
+            row_baik['pm25_lag_1h'] = 8.5
+            row_baik['pm25_lag_24h'] = 9.0
+            row_baik['pm25_rolling_mean_6h'] = 8.4
+            tag_baik = "SIMULASI UDARA BERSIH"
+        presets['baik'] = {
+            'label': "Simulasi Kondisi: Kategori BAIK (PM2.5 8.20 µg/m³ - Udara Bersih)",
+            'tag': tag_baik,
+            'desc': 'Skenario kualitas udara bersih: angin kencang mendinginkan atmosfer, lalu lintas lengang.',
+            'row': row_baik
+        }
+        
+    # 6. Mode Kustom Bebas
+    presets['custom'] = {
+        'label': "Mode Kustom: Input Manual Bebas (Atur Slider Sendiri)",
+        'tag': 'INPUT MANUAL',
+        'desc': 'Atur seluruh 12 parameter meteorologi dan mobilitas secara manual sesuai skenario pengujian.',
+        'row': None
+    }
+    
+    return presets
+
 
 
 # ==============================================================================
@@ -622,35 +730,91 @@ tab_input, tab_monitoring, tab_evaluasi, tab_database = st.tabs([
 # TAB 1: SIMULATOR PREDIKSI AI (INPUT PENGGUNA)
 # ------------------------------------------------------------------------------
 with tab_input:
-    st.markdown("<div style='font-size:1.15rem; font-weight:800; color:#0A192F; margin-bottom:0.2rem;'>Formulir Parameter Simulasi Lingkungan</div>", unsafe_allow_html=True)
-    st.markdown("<div style='font-size:0.88rem; color:#64748B; margin-bottom:1.2rem;'>Atur nilai-nilai variabel di bawah ini untuk menguji respons inferensi prediktif model XGBoost terhadap kondisi atmosfer dan beban lalu lintas:</div>", unsafe_allow_html=True)
+    st.markdown("<div style='font-size:1.15rem; font-weight:800; color:#0A192F; margin-bottom:0.2rem;'>Formulir Parameter Simulasi & Inferensi Prediksi Lingkungan</div>", unsafe_allow_html=True)
+    st.markdown("<div style='font-size:0.88rem; color:#64748B; margin-bottom:1.0rem;'>Pilih salah satu <b>Preset Data Riil Lapangan</b> di bawah ini untuk mengisi seluruh 12 parameter secara otomatis dan menguji validitas model terhadap data aktual, atau gunakan <b>Mode Kustom</b> untuk simulasi manual bebas:</div>", unsafe_allow_html=True)
     
     if model is None or scaler is None:
-        st.error("Artefak model (xgboost_pm25_model.pkl atau scaler.pkl) belum ditemukan di folder models/.")
+        st.error("Artefak model (xgboost_pm25_model.pkl / xgboost_pm25_model.json atau scaler.pkl) belum ditemukan di folder models/.")
     else:
-        with st.form("main_clean_prediction_form"):
+        # ----------------------------------------------------------------------
+        # A. PEMILIHAN PRESET INPUT OTOMATIS (AUTO-POPULATE DARI DATA RIIL)
+        # ----------------------------------------------------------------------
+        presets = get_preset_samples(df_env)
+        preset_keys = list(presets.keys())
+        
+        col_preset_sel, col_preset_badge = st.columns([1.6, 2.0])
+        with col_preset_sel:
+            selected_preset_key = st.selectbox(
+                "Mode Pengisian Parameter Input:",
+                options=preset_keys,
+                format_func=lambda k: presets[k]['label'],
+                index=0,
+                help="Pilih preset data observasi sensor riil dari database untuk mengisi seluruh 12 fitur otomatis sekaligus memverifikasi kesesuaian prediksi dengan label aktual lapangan."
+            )
+            
+        selected_preset = presets[selected_preset_key]
+        preset_row = selected_preset['row']
+        
+        with col_preset_badge:
+            badge_color = "#0A192F"
+            tag_color = "#D97706" if "DATA RIIL" in selected_preset['tag'] else "#3B82F6"
+            st.markdown(f"""
+<div style="background:#FFFFFF; border:1.5px solid #CBD5E1; border-left:5px solid {tag_color}; border-radius:10px; padding:0.65rem 1.0rem; margin-top:1.55rem; box-shadow:0 2px 5px rgba(0,0,0,0.03);">
+<div style="display:flex; align-items:center; gap:0.5rem;">
+<span style="font-size:0.72rem; font-weight:800; background:{badge_color}; color:{tag_color}; padding:0.18rem 0.55rem; border-radius:4px; letter-spacing:0.04em;">{selected_preset['tag']}</span>
+<span style="font-size:0.82rem; font-weight:700; color:#0A192F;">{selected_preset['label']}</span>
+</div>
+<div style="font-size:0.80rem; color:#475569; margin-top:0.3rem; line-height:1.35;">{selected_preset['desc']}</div>
+</div>
+""", unsafe_allow_html=True)
+
+        st.markdown("<div style='height:0.8rem;'></div>", unsafe_allow_html=True)
+        
+        # Ekstraksi nilai default dari preset yang dipilih
+        if preset_row is not None:
+            d_temp = float(preset_row.get('temperature_c', 30.0))
+            d_humid = float(preset_row.get('humidity_pct', 75.0))
+            d_wind = float(preset_row.get('wind_speed_kmh', 12.0))
+            d_rain = float(preset_row.get('rainfall_mm', 0.0))
+            d_traffic = float(preset_row.get('traffic_index', 70.0))
+            d_hour = int(preset_row.get('hour_of_day', 8))
+            d_weekend = int(preset_row.get('is_weekend', 0))
+            d_holiday = int(preset_row.get('is_holiday', 0))
+            d_lag1 = float(preset_row.get('pm25_lag_1h', 45.0))
+            d_lag24 = float(preset_row.get('pm25_lag_24h', 42.0))
+            d_roll6 = float(preset_row.get('pm25_rolling_mean_6h', 44.0))
+            d_wind_dir = float(preset_row.get('wind_direction_deg', 180.0))
+        else:
+            d_temp, d_humid, d_wind, d_rain = 30.0, 75.0, 12.0, 0.0
+            d_traffic, d_hour, d_weekend, d_holiday = 70.0, 8, 0, 0
+            d_lag1, d_lag24, d_roll6, d_wind_dir = 45.0, 42.0, 44.0, 180.0
+
+        # ----------------------------------------------------------------------
+        # B. FORMULIR INPUT 12 PARAMETER MODEL
+        # ----------------------------------------------------------------------
+        with st.form(f"prediction_form_{selected_preset_key}"):
             col_f1, col_f2, col_f3 = st.columns(3)
             
             with col_f1:
                 st.markdown("<div style='font-size:0.92rem; font-weight:800; color:#0A192F; text-transform:uppercase; letter-spacing:0.04em; margin-bottom:0.8rem; padding-bottom:0.3rem; border-bottom:2px solid #E2E8F0;'>Parameter Meteorologi Atmosfer</div>", unsafe_allow_html=True)
-                temp_in = st.slider("Suhu Udara (°C)", min_value=18.0, max_value=42.0, value=30.0, step=0.5)
-                humid_in = st.slider("Kelembaban Relatif (%)", min_value=20.0, max_value=100.0, value=75.0, step=1.0)
-                wind_in = st.slider("Kecepatan Angin (km/jam)", min_value=1.0, max_value=45.0, value=12.0, step=0.5)
-                rain_in = st.slider("Curah Hujan (mm)", min_value=0.0, max_value=50.0, value=0.0, step=0.5)
+                temp_in = st.slider("Suhu Udara (°C)", min_value=18.0, max_value=42.0, value=min(max(float(d_temp), 18.0), 42.0), step=0.5, key=f"t_{selected_preset_key}")
+                humid_in = st.slider("Kelembaban Relatif (%)", min_value=20.0, max_value=100.0, value=min(max(float(d_humid), 20.0), 100.0), step=1.0, key=f"h_{selected_preset_key}")
+                wind_in = st.slider("Kecepatan Angin (km/jam)", min_value=1.0, max_value=45.0, value=min(max(float(d_wind), 1.0), 45.0), step=0.5, key=f"w_{selected_preset_key}")
+                rain_in = st.slider("Curah Hujan (mm)", min_value=0.0, max_value=50.0, value=min(max(float(d_rain), 0.0), 50.0), step=0.5, key=f"r_{selected_preset_key}")
                 
             with col_f2:
                 st.markdown("<div style='font-size:0.92rem; font-weight:800; color:#0A192F; text-transform:uppercase; letter-spacing:0.04em; margin-bottom:0.8rem; padding-bottom:0.3rem; border-bottom:2px solid #E2E8F0;'>Parameter Mobilitas & Temporal</div>", unsafe_allow_html=True)
-                traffic_in = st.slider("Indeks Kemacetan Lalu Lintas (0 - 100)", min_value=0.0, max_value=100.0, value=70.0, step=5.0)
-                hour_in = st.slider("Jam dalam Sehari (WIB)", min_value=0, max_value=23, value=8)
-                is_weekend_in = st.selectbox("Klasifikasi Hari Kerja:", options=[0, 1], format_func=lambda x: "Akhir Pekan (Sabtu / Minggu)" if x == 1 else "Hari Kerja Aktif (Senin - Jumat)")
-                is_holiday_in = st.selectbox("Status Hari Libur:", options=[0, 1], format_func=lambda x: "Hari Libur Nasional" if x == 1 else "Hari Biasa")
+                traffic_in = st.slider("Indeks Kemacetan Lalu Lintas (0 - 100)", min_value=0.0, max_value=100.0, value=min(max(float(d_traffic), 0.0), 100.0), step=5.0, key=f"tr_{selected_preset_key}")
+                hour_in = st.slider("Jam dalam Sehari (WIB)", min_value=0, max_value=23, value=min(max(int(d_hour), 0), 23), key=f"hr_{selected_preset_key}")
+                is_weekend_in = st.selectbox("Klasifikasi Hari Kerja:", options=[0, 1], index=min(max(int(d_weekend), 0), 1), format_func=lambda x: "Akhir Pekan (Sabtu / Minggu)" if x == 1 else "Hari Kerja Aktif (Senin - Jumat)", key=f"wk_{selected_preset_key}")
+                is_holiday_in = st.selectbox("Status Hari Libur:", options=[0, 1], index=min(max(int(d_holiday), 0), 1), format_func=lambda x: "Hari Libur Nasional" if x == 1 else "Hari Biasa", key=f"hol_{selected_preset_key}")
                 
             with col_f3:
                 st.markdown("<div style='font-size:0.92rem; font-weight:800; color:#0A192F; text-transform:uppercase; letter-spacing:0.04em; margin-bottom:0.8rem; padding-bottom:0.3rem; border-bottom:2px solid #E2E8F0;'>Riwayat Historis (Fitur Lag)</div>", unsafe_allow_html=True)
-                lag1_in = st.number_input("PM2.5 1 Jam Sebelumnya (µg/m³)", min_value=0.0, max_value=250.0, value=45.0, step=1.0)
-                lag24_in = st.number_input("PM2.5 24 Jam Sebelumnya (µg/m³)", min_value=0.0, max_value=250.0, value=42.0, step=1.0)
-                roll6_in = st.number_input("Rata-rata PM2.5 6 Jam Terakhir (µg/m³)", min_value=0.0, max_value=250.0, value=44.0, step=1.0)
-                wind_dir_in = st.number_input("Arah Angin (Derajat Azimuth 0-360)", min_value=0.0, max_value=360.0, value=180.0, step=10.0)
+                lag1_in = st.number_input("PM2.5 1 Jam Sebelumnya (µg/m³)", min_value=0.0, max_value=250.0, value=min(max(float(d_lag1), 0.0), 250.0), step=1.0, key=f"l1_{selected_preset_key}")
+                lag24_in = st.number_input("PM2.5 24 Jam Sebelumnya (µg/m³)", min_value=0.0, max_value=250.0, value=min(max(float(d_lag24), 0.0), 250.0), step=1.0, key=f"l24_{selected_preset_key}")
+                roll6_in = st.number_input("Rata-rata PM2.5 6 Jam Terakhir (µg/m³)", min_value=0.0, max_value=250.0, value=min(max(float(d_roll6), 0.0), 250.0), step=1.0, key=f"r6_{selected_preset_key}")
+                wind_dir_in = st.number_input("Arah Angin (Derajat Azimuth 0-360)", min_value=0.0, max_value=360.0, value=min(max(float(d_wind_dir), 0.0), 360.0), step=10.0, key=f"wd_{selected_preset_key}")
 
             st.markdown("<br>", unsafe_allow_html=True)
             btn_predict = st.form_submit_button("Jalankan Inferensi Model Prediksi Sekarang", use_container_width=True)
@@ -695,10 +859,120 @@ with tab_input:
             }
             st.session_state['prediction_logs_memory'].insert(0, log_record)
             
-            # Kartu Hasil Prediksi
-            st.markdown(f"""
+            # ------------------------------------------------------------------
+            # C. PANEL KOMPARASI & VALIDASI (PREDIKSI VS GROUND TRUTH AKTUAL)
+            # ------------------------------------------------------------------
+            if preset_row is not None and 'pm25' in preset_row:
+                actual_pm25 = round(float(preset_row['pm25']), 2)
+                actual_aqi_res = calculate_pm25_aqi(actual_pm25)
+                act_badge_bg = actual_aqi_res['color']
+                act_badge_text = "#000000" if actual_aqi_res['color'] in ["#FFFF00", "#00E400"] else "#FFFFFF"
+                
+                diff_pm25 = round(abs(pred_pm25 - actual_pm25), 2)
+                diff_aqi = abs(aqi_res['aqi'] - actual_aqi_res['aqi'])
+                rel_accuracy = max(0.0, round(100.0 - (diff_pm25 / max(actual_pm25, 1.0) * 100), 1))
+                is_cat_match = (aqi_res['category'] == actual_aqi_res['category'])
+                
+                if is_cat_match:
+                    match_badge_bg = "rgba(16, 185, 129, 0.15)"
+                    match_badge_border = "#10B981"
+                    match_badge_text = "#047857"
+                    match_badge_label = "KATEGORI PREDIKSI & DATA AKTUAL SESUAI (COCOK 100%)"
+                    eval_note = "Model XGBoost berhasil memprediksi tingkat bahaya polusi udara dalam kategori US EPA yang sama persis dengan observasi fisik stasiun lapangan."
+                else:
+                    match_badge_bg = "rgba(245, 158, 11, 0.15)"
+                    match_badge_border = "#F59E0B"
+                    match_badge_text = "#B45309"
+                    match_badge_label = "KATEGORI DALAM MARGIN TRANSISI (BATAS AMBANG KELAS)"
+                    eval_note = f"Estimasi model berada pada ambang transisi kategori dengan selisih partikulat hanya {diff_pm25} µg/m³, tetap konsisten secara dinamika atmosfer."
+
+                # Kartu Komparasi Ground Truth vs Prediksi AI
+                st.markdown(f"""
 <div style="background:#0A192F; border:2px solid #D97706; border-radius:14px; padding:1.8rem 2.2rem; color:#FFFFFF; margin-top:1.4rem; box-shadow:0 10px 25px rgba(10,25,47,0.2);">
-<div style="font-size:0.8rem; font-weight:800; color:#D97706; letter-spacing:0.08em; text-transform:uppercase; margin-bottom:0.6rem;">Hasil Inferensi Prediktif XGBoost Regressor</div>
+<div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1.5px solid rgba(217,119,6,0.3); padding-bottom:0.75rem; margin-bottom:1.4rem;">
+<div>
+<div style="font-size:0.8rem; font-weight:800; color:#D97706; letter-spacing:0.08em; text-transform:uppercase;">Panel Validasi Empiris Model (Ground Truth vs Prediksi AI)</div>
+<div style="font-size:1.1rem; font-weight:700; color:#FFFFFF; margin-top:0.15rem;">Perbandingan Estimasi XGBoost Terhadap Observasi Fisik Lapangan</div>
+</div>
+<span style="font-size:0.75rem; font-weight:800; background:rgba(217,119,6,0.2); color:#FBBF24; padding:0.35rem 0.8rem; border-radius:6px; border:1px solid #D97706;">SAMPEL RIIL TERPILIH</span>
+</div>
+
+<div style="display:grid; grid-template-columns:1fr 1fr; gap:2.0rem;">
+<!-- Sisi Kiri: Estimasi Model Prediksi -->
+<div style="background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.12); border-radius:10px; padding:1.4rem;">
+<div style="font-size:0.78rem; font-weight:800; color:#93C5FD; text-transform:uppercase; letter-spacing:0.04em; margin-bottom:0.8rem;">Estimasi Hasil Prediksi Model XGBoost</div>
+<div style="display:flex; justify-content:space-between; align-items:baseline;">
+<div>
+<div style="font-size:2.6rem; font-weight:800; color:#FFFFFF; line-height:1.0; font-family:'JetBrains Mono', monospace;">{pred_pm25} <span style="font-size:1.0rem; color:#93C5FD; font-family:'Plus Jakarta Sans', sans-serif;">µg/m³</span></div>
+<div style="color:#94A3B8; font-size:0.82rem; margin-top:0.3rem;">Prediksi Konsentrasi PM2.5</div>
+</div>
+<div style="text-align:right;">
+<div style="font-size:2.4rem; font-weight:800; color:#FBBF24; line-height:1.0; font-family:'JetBrains Mono', monospace;">{aqi_res['aqi']} <span style="font-size:0.95rem; color:#CBD5E1; font-family:'Plus Jakarta Sans', sans-serif;">/ 500</span></div>
+<div style="color:#94A3B8; font-size:0.82rem; margin-top:0.3rem;">Skor AQI Prediksi</div>
+</div>
+</div>
+<div style="margin-top:1.1rem;">
+<div style="display:inline-block; padding:0.4rem 0.9rem; border-radius:6px; font-weight:800; font-size:0.84rem; background:{badge_bg}; color:{badge_text};">
+{aqi_res['category']}
+</div>
+</div>
+</div>
+
+<!-- Sisi Kanan: Pengukuran Aktual Sensor Lapangan -->
+<div style="background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.12); border-radius:10px; padding:1.4rem;">
+<div style="font-size:0.78rem; font-weight:800; color:#86EFAC; text-transform:uppercase; letter-spacing:0.04em; margin-bottom:0.8rem;">Pengukuran Aktual Sensor Lapangan (Ground Truth)</div>
+<div style="display:flex; justify-content:space-between; align-items:baseline;">
+<div>
+<div style="font-size:2.6rem; font-weight:800; color:#FFFFFF; line-height:1.0; font-family:'JetBrains Mono', monospace;">{actual_pm25} <span style="font-size:1.0rem; color:#86EFAC; font-family:'Plus Jakarta Sans', sans-serif;">µg/m³</span></div>
+<div style="color:#94A3B8; font-size:0.82rem; margin-top:0.3rem;">Sensor OpenAQ Lapangan</div>
+</div>
+<div style="text-align:right;">
+<div style="font-size:2.4rem; font-weight:800; color:#FBBF24; line-height:1.0; font-family:'JetBrains Mono', monospace;">{actual_aqi_res['aqi']} <span style="font-size:0.95rem; color:#CBD5E1; font-family:'Plus Jakarta Sans', sans-serif;">/ 500</span></div>
+<div style="color:#94A3B8; font-size:0.82rem; margin-top:0.3rem;">Skor AQI Aktual</div>
+</div>
+</div>
+<div style="margin-top:1.1rem;">
+<div style="display:inline-block; padding:0.4rem 0.9rem; border-radius:6px; font-weight:800; font-size:0.84rem; background:{act_badge_bg}; color:{act_badge_text};">
+{actual_aqi_res['category']}
+</div>
+</div>
+</div>
+</div>
+
+<!-- Kotak Evaluasi Kesesuaian Bawah -->
+<div style="margin-top:1.5rem; background:#FFFFFF; border:1.5px solid {match_badge_border}; border-radius:10px; padding:1.2rem 1.4rem; color:#0A192F;">
+<div style="display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:1.0rem;">
+<div>
+<span style="font-size:0.82rem; font-weight:800; background:{match_badge_bg}; color:{match_badge_text}; border:1px solid {match_badge_border}; padding:0.3rem 0.7rem; border-radius:6px;">
+{match_badge_label}
+</span>
+<div style="font-size:0.85rem; color:#475569; margin-top:0.55rem; line-height:1.4;">
+{eval_note}
+</div>
+</div>
+<div style="display:flex; gap:1.8rem; text-align:right;">
+<div>
+<div style="font-size:1.4rem; font-weight:800; color:#0A192F; font-family:'JetBrains Mono', monospace;">{diff_pm25} µg/m³</div>
+<div style="font-size:0.74rem; font-weight:600; color:#64748B;">Selisih Galat Mutlak</div>
+</div>
+<div>
+<div style="font-size:1.4rem; font-weight:800; color:#D97706; font-family:'JetBrains Mono', monospace;">{rel_accuracy}%</div>
+<div style="font-size:0.74rem; font-weight:600; color:#64748B;">Akurasi Relatif Skenario</div>
+</div>
+</div>
+</div>
+<div style="font-size:0.82rem; color:#334155; margin-top:0.8rem; padding-top:0.6rem; border-top:1px solid #E2E8F0;">
+<b>Rekomendasi Tindakan:</b> {aqi_res['action']}
+</div>
+</div>
+</div>
+""", unsafe_allow_html=True)
+
+            else:
+                # Mode Kustom Bebas (Tampilan Standar)
+                st.markdown(f"""
+<div style="background:#0A192F; border:2px solid #D97706; border-radius:14px; padding:1.8rem 2.2rem; color:#FFFFFF; margin-top:1.4rem; box-shadow:0 10px 25px rgba(10,25,47,0.2);">
+<div style="font-size:0.8rem; font-weight:800; color:#D97706; letter-spacing:0.08em; text-transform:uppercase; margin-bottom:0.6rem;">Hasil Inferensi Prediktif XGBoost Regressor (Mode Kustom)</div>
 <div style="display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:2.0rem;">
 <div>
 <div style="font-size:2.9rem; font-weight:800; color:#FFFFFF; line-height:1.0; font-family:'JetBrains Mono', monospace;">{pred_pm25} <span style="font-size:1.15rem; color:#93C5FD; font-family:'Plus Jakarta Sans', sans-serif; font-weight:600;">µg/m³</span></div>

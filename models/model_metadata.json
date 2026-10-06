@@ -2,9 +2,9 @@
     "model_name": "XGBoost Regressor PM2.5",
     "version": "v1.0.0",
     "metrics": {
-        "mae": 2.46,
-        "rmse": 3.12,
-        "r2_score": 0.7756
+        "mae": 3.1,
+        "rmse": 3.99,
+        "r2_score": 0.7185
     },
     "features": [
         "temperature_c",
