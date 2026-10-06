@@ -2,7 +2,7 @@
 Streamlit Dashboard: Sistem Prediksi Konsentrasi PM2.5 & Estimasi AQI
 Berbasis Algoritma XGBoost Regressor dan Standar US EPA (Piecewise Linear Interpolation)
 Tema: Premium Enterprise Light Theme (Deep Navy #0A192F & Champagne Gold #D97706)
-Fitur: Kontras Maksimal (Semua Menu Tab & Metrik Terbaca 100%), Bebas Kode Mentah, Bebas Emotikon Berlebihan
+Fitur: Menu Tab Bergaya Pill Card (Kontras Maksimal, Huruf Tebal Sangat Jelas), Bebas Emotikon Berlebihan
 """
 
 import os
@@ -35,11 +35,10 @@ st.set_page_config(
 )
 
 # Injeksi CSS: Deep Navy (#0A192F), Champagne Gold (#D97706), Soft Slate (#F8FAFC)
-# Menjamin 100% kontras untuk tab menu, widget input, tombol, dan metrik
 st.markdown("""
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com">
-<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=JetBrains+Mono:wght@600;700;800&display=swap" rel="stylesheet">
 
 <style>
 /* Reset Global */
@@ -50,56 +49,91 @@ html, body, [class*="css"], .stApp {
 }
 
 /* --------------------------------------------------------------------------
-   1. MENU TAB - MEMASTIKAN TEKS TAB TIDAK TRANSPARAN & SELALU TERBACA
+   1. MENU TAB - DESAIN KARTU SEGMENTED PILL (TEGAS, JELAS, BEBAS WARNA MERAH)
 -------------------------------------------------------------------------- */
+.stTabs [data-baseweb="tab-list"],
 [data-baseweb="tab-list"] {
-    gap: 1.5rem !important;
-    border-bottom: 2px solid #E2E8F0 !important;
-    margin-bottom: 1.5rem !important;
-    background: transparent !important;
+    display: flex !important;
+    gap: 0.8rem !important;
+    background: #E2E8F0 !important;
+    padding: 6px 8px !important;
+    border-radius: 12px !important;
+    border: 1.5px solid #CBD5E1 !important;
+    margin-bottom: 2.0rem !important;
+    width: fit-content !important;
+    max-width: 100% !important;
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.03) !important;
 }
 
-/* Semua Tombol Tab (Aktif & Tidak Aktif) */
-[data-baseweb="tab-list"] button,
-[data-baseweb="tab-list"] button div,
-[data-baseweb="tab-list"] button p,
-button[data-baseweb="tab"],
-button[data-baseweb="tab"] * {
-    font-size: 1.05rem !important;
-    font-weight: 700 !important;
-    opacity: 1 !important;
-    visibility: visible !important;
+/* Hilangkan garis bawah merah bawaan */
+.stTabs [data-baseweb="tab-highlight"],
+[data-baseweb="tab-highlight"],
+[data-baseweb="tab-border"] {
+    display: none !important;
+    visibility: hidden !important;
+    height: 0px !important;
 }
 
-/* Tab Tidak Aktif: Navy Slate Gelap Kontras Tinggi */
-button[data-baseweb="tab"][aria-selected="false"],
+/* Tombol Tab Dasar */
+.stTabs [data-baseweb="tab"],
+button[data-baseweb="tab"] {
+    border-radius: 9px !important;
+    padding: 0.75rem 1.6rem !important;
+    border: 1.5px solid transparent !important;
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    cursor: pointer !important;
+    outline: none !important;
+}
+
+/* Tab Tidak Aktif: Kartu Putih Bersih dengan Teks Deep Navy Tebal */
+.stTabs [data-baseweb="tab"][aria-selected="false"],
+button[data-baseweb="tab"][aria-selected="false"] {
+    background-color: #FFFFFF !important;
+    border-color: #CBD5E1 !important;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.03) !important;
+}
+
+.stTabs [data-baseweb="tab"][aria-selected="false"] p,
+.stTabs [data-baseweb="tab"][aria-selected="false"] div,
+.stTabs [data-baseweb="tab"][aria-selected="false"] span,
 button[data-baseweb="tab"][aria-selected="false"] * {
-    color: #334155 !important;
-    background: transparent !important;
-    font-weight: 700 !important;
+    color: #0A192F !important;
+    font-size: 1.05rem !important;
+    font-weight: 800 !important;
+    letter-spacing: -0.01em !important;
 }
 
-button[data-baseweb="tab"][aria-selected="false"]:hover,
-button[data-baseweb="tab"][aria-selected="false"]:hover * {
+.stTabs [data-baseweb="tab"][aria-selected="false"]:hover {
+    border-color: #D97706 !important;
+    transform: translateY(-1px) !important;
+    box-shadow: 0 3px 10px rgba(217, 119, 6, 0.15) !important;
+}
+
+.stTabs [data-baseweb="tab"][aria-selected="false"]:hover * {
     color: #D97706 !important;
 }
 
-/* Tab Aktif: Deep Navy Pekat dengan Garis Bawah Emas Gold */
-button[data-baseweb="tab"][aria-selected="true"],
-button[data-baseweb="tab"][aria-selected="true"] * {
-    color: #0A192F !important;
-    font-weight: 800 !important;
+/* Tab Aktif: Latar Deep Navy Mewah, Teks Putih Kontras & Border Gold */
+.stTabs [data-baseweb="tab"][aria-selected="true"],
+button[data-baseweb="tab"][aria-selected="true"] {
+    background: linear-gradient(135deg, #0A192F 0%, #1E3A8A 100%) !important;
+    border-color: #D97706 !important;
+    box-shadow: 0 4px 15px rgba(10, 25, 47, 0.25) !important;
+    transform: translateY(-1px) !important;
 }
 
-button[data-baseweb="tab"][aria-selected="true"] {
-    border-bottom: 3.5px solid #D97706 !important;
-    background: rgba(217, 119, 6, 0.08) !important;
-    border-radius: 8px 8px 0 0 !important;
-    padding: 0.6rem 1.2rem !important;
+.stTabs [data-baseweb="tab"][aria-selected="true"] p,
+.stTabs [data-baseweb="tab"][aria-selected="true"] div,
+.stTabs [data-baseweb="tab"][aria-selected="true"] span,
+button[data-baseweb="tab"][aria-selected="true"] * {
+    color: #FFFFFF !important;
+    font-size: 1.05rem !important;
+    font-weight: 800 !important;
+    letter-spacing: -0.01em !important;
 }
 
 /* --------------------------------------------------------------------------
-   2. METRIK ANGKA (st.metric) - MEMASTIKAN ANGKA TIDAK PUTIH/TRANSPARAN
+   2. METRIK ANGKA (st.metric) - TEBAL, JELAS, DEEP NAVY
 -------------------------------------------------------------------------- */
 [data-testid="stMetric"] {
     background: #FFFFFF !important;
@@ -438,12 +472,12 @@ st.markdown("""
 
 
 # ==============================================================================
-# 6. TAB UTAMA
+# 6. TAB UTAMA DENGAN LABEL TEGAS & TEBAL
 # ==============================================================================
 tab_input, tab_monitoring, tab_evaluasi = st.tabs([
-    "Simulator Prediksi AI (Input Pengguna)",
-    "Monitoring Lingkungan & Analisis Data (Q1 - Q4)",
-    "Evaluasi Kinerja Model & Kontribusi Fitur (Q5)"
+    "1. SIMULATOR PREDIKSI AI",
+    "2. MONITORING DATA LINGKUNGAN (Q1 - Q4)",
+    "3. EVALUASI MODEL XGBOOST (Q5)"
 ])
 
 
@@ -590,7 +624,7 @@ with tab_monitoring:
         aqi_info = calculate_pm25_aqi(latest['pm25'])
         waktu_str = latest['recorded_at'].strftime('%d %b %Y %H:%M') if 'recorded_at' in latest else "Terkini"
         
-        # MENGGUNAKAN KOMPONEN STREAMLIT NATIVE st.metric AGAR 100% BEBAS DARI KODE MENTAH HTML
+        # MENGGUNAKAN KOMPONEN STREAMLIT NATIVE st.metric
         col_m1, col_m2, col_m3, col_m4, col_m5 = st.columns(5)
         with col_m1:
             st.metric(label="Konsentrasi PM2.5", value=f"{latest['pm25']:.1f} µg/m³", delta=f"Obs: {waktu_str}", delta_color="off")
